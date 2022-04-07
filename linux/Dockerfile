@@ -16,6 +16,7 @@ RUN dpkg --add-architecture arm64 \
 		&& apt-get install \
 			wget gnupg curl \
 			build-essential \
+			libz-dev \
 			gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
 			musl musl-dev musl:arm64 musl-dev:arm64 \
 			-y
