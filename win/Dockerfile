@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
 ARG LLVM_VER=13.0.0
-ARG RUST_VER=1.59.0
+ARG RUST_VER=1.60.0
 
 WORKDIR C:/buildtools
 
