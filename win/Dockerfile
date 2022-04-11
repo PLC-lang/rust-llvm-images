@@ -49,7 +49,7 @@ RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache --installPath
 
 
 
-SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "C:\\buildtools\\git\\bin\\bash.exe", "-i", "-l"]
+SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
 # VS install done, install extra compoments
 RUN rustup component add llvm-tools-preview
 RUN cargo install mdbook grcov
