@@ -44,23 +44,28 @@ SHELL ["cmd", "/S", "/C"]
 
 RUN `
     # Download the Build Tools bootstrapper.
-    curl -SL --output C:\Temp\vs_buildtools.exe https://aka.ms/vs/17/release/vs_buildtools.exe `
+    curl -SL --output C:\\Temp\\vs_buildtools.exe https://aka.ms/vs/17/release/vs_buildtools.exe `
     `
     # Install Build Tools with the Microsoft.VisualStudio.Workload.AzureBuildTools workload, excluding workloads and components with known issues.
-    && (start /w C:\Temp\vs_buildtools.exe --quiet --wait --norestart --nocache `
-        --installPath C:\buildtools `
+    && (start /w C:\\Temp\\vs_buildtools.exe --quiet --wait --norestart --nocache `
+        --installPath C:/buildtools/vs `
 		--add Microsoft.Component.MSBuild `
 		--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
 		--add Microsoft.VisualStudio.Component.Windows10SDK.22000 `
-		--add Microsoft.VisualStudio.Component.Windows10SDK.17763 `
-        || IF "%ERRORLEVEL%"=="3010" EXIT 0) `
-    `
+		--add Microsoft.VisualStudio.Workload.AzureBuildTools `
+        --remove Microsoft.VisualStudio.Component.Windows10SDK.10240 `
+        --remove Microsoft.VisualStudio.Component.Windows10SDK.10586 `
+        --remove Microsoft.VisualStudio.Component.Windows10SDK.14393 `
+        --remove Microsoft.VisualStudio.Component.Windows81SDK `
+        || IF "%ERRORLEVEL%"=="3010" EXIT 0)
+    # `
     # Cleanup
-    && del /q C:\Temp\vs_buildtools.exe
+    # && del /q C:\\Temp\\vs_buildtools.exe
 RUN setx /M __VSCMD_ARG_NO_LOGO "1"
 # VS install done, install extra compoments
 # Switch to powershell for the remainder of the build
-SHELL ["powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
+SHELL ["C:\\BuildTools\\vs\\Common7\\Tools\\VsDevCmd.bat", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
+# SHELL ["C:\\buildtools\\git\\bin\\bash.exe", "-i", "-l"]
 
 RUN cargo install mdbook grcov
 
