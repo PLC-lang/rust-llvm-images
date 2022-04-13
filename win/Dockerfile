@@ -1,13 +1,11 @@
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
 ARG LLVM_VER=13.0.0
-ARG RUST_VER=1.60.0
+ARG RUST_VER=1.59.0
 
 # Install VC++
 
 WORKDIR C:/buildtools
-
-RUN mkdir C:\TEMP
 
 # Download channel for fixed install.
 ARG CHANNEL_URL=https://aka.ms/vs/16/release/channel
@@ -22,17 +20,20 @@ RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache --installPath
 
 SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
 
-RUN Invoke-WebRequest -UserAgent 'DockerCI' -outfile 7zsetup.exe https://www.7-zip.org/a/7z$env:7ZIP_VERSION-x64.exe
-RUN Invoke-WebRequest -UserAgent 'DockerCI' github.com/ghaith/llvm-package-windows/releases/download/v$env:LLVM_VER/LLVM-$env:LLVM_VER-win64.7z -outfile C:/TEMP/llvm.7z
-RUN Invoke-WebRequest -UserAgent 'DockerCI' https://win.rustup.rs -outfile C:/TEMP/rustup-init.exe
+# Install scoop 
+RUN iex (new-object net.webclient).downloadstring('https://get.scoop.sh')
 
-# Install 7Zip
-RUN start-process .\7zsetup -ArgumentList '/S /D=c:/7zip' -Wait
-RUN setx /M PATH $($Env:PATH + ';C:/7zip') 
+# Install depedencies
+RUN scoop install 7zip
 
-# Extract llvm sources
+# Setup llvm sources
+ADD https://github.com/ghaith/llvm-package-windows/releases/download/v$LLVM_VER/LLVM-$LLVM_VER-win64.7z C:/TEMP/llvm.7z
+
 RUN 7z x C:/TEMP/llvm.7z -ollvm 
+
 # Install Rust
+# RUN scoop install rustup
+ADD https://win.rustup.rs C:/TEMP/rustup-init.exe
 RUN C:/TEMP/rustup-init.exe --default-toolchain $env:RUST_VER -y
 RUN rustup install nightly
 
