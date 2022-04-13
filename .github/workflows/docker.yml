@@ -23,10 +23,10 @@ jobs:
             os: "ubuntu-latest",
             version: "linux"
           }
-          # - {
-          #   os: "windows-2019",
-          #   version: "win"
-          # }
+          - {
+            os: "windows-2019",
+            version: "win"
+          }
     permissions:
       packages: write
       contents: read
