@@ -1,7 +1,9 @@
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
 ARG LLVM_VER=13.0.0
-ARG RUST_VER=1.59.0
+ARG RUST_VER=1.60.0
+ARG 7ZIP_VERSION=2107
+ARG GIT_VERSION=2.35.2
 
 # Install VC++
 
@@ -20,11 +22,10 @@ RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache --installPath
 
 SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
 
-# Install scoop 
-RUN iex (new-object net.webclient).downloadstring('https://get.scoop.sh')
-
-# Install depedencies
-RUN scoop install 7zip
+RUN Invoke-WebRequest -UserAgent 'DockerCI' -outfile 7zsetup.exe https://www.7-zip.org/a/7z$env:7ZIP_VERSION-x64.exe
+RUN Invoke-WebRequest -UserAgent 'DockerCI' github.com/ghaith/llvm-package-windows/releases/download/v$env:LLVM_VER/LLVM-$env:LLVM_VER-win64.7z -outfile C:/TEMP/llvm.7z
+RUN Invoke-WebRequest -UserAgent 'DockerCI' https://win.rustup.rs -outfile C:/TEMP/rustup-init.exe
+RUN Invoke-WebRequest -UserAgent 'DockerCI' https://github.com/git-for-windows/git/releases/download/v$env:GIT_VERSION.windows.1/PortableGit-$env:GIT_VERSION-64-bit.7z.exe -outfile C:/TEMP/git-install.exe
 
 # Setup llvm sources
 ADD https://github.com/ghaith/llvm-package-windows/releases/download/v$LLVM_VER/LLVM-$LLVM_VER-win64.7z C:/TEMP/llvm.7z
@@ -42,7 +43,6 @@ RUN cargo install mdbook grcov
 
 RUN setx /M PATH $($Env:PATH + ';C:/buildtools/llvm/bin') 
 
-ADD https://github.com/git-for-windows/git/releases/download/v2.33.1.windows.1/PortableGit-2.33.1-64-bit.7z.exe C:/TEMP/git-install.exe
 
 RUN 7z.exe x C:/TEMP/git-install.exe -ogit
 
