@@ -23,10 +23,10 @@ jobs:
             os: "ubuntu-latest",
             version: "linux"
           }
-          - {
-            os: "windows-2019",
-            version: "win"
-          }
+          # - {
+          #   os: "windows-2019",
+          #   version: "win"
+          # }
     permissions:
       packages: write
       contents: read
@@ -58,7 +58,6 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
           # Use Docker `latest` tag convention
           [ "$VERSION" == "main" ] && VERSION=latest
-          VERSION=$VERSION-${{ matrix.config.version }}
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION

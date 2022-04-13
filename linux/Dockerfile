@@ -3,6 +3,9 @@ ARG BASE_IMAGE=debian:$DEBIAN_VERSION
 
 FROM $BASE_IMAGE
 
+# Make sure we are on root
+USER root
+
 ARG RUST_VERSION=1.60
 ARG LLVM_VER=13
 # Use the bullseye llvm version because there is no newer one yet
