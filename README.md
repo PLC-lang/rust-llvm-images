@@ -17,12 +17,12 @@ Build the image using
 
 ### Direct usage 
 Pull the image using 
-`docker pull ghcr.io/plc-lang/rust-llvm:latest-linux`
+`docker pull ghcr.io/plc-lang/rust-llvm:latest`
 
 Run with
-`docker run -it -v $PWD:/build ghcr.io/plc-lang/rust-llvm:latest-linux`
+`docker run -it -v $PWD:/build ghcr.io/plc-lang/rust-llvm:latest`
 
 ### Importing
 
 You can import the image into another Dockerfile using
-`FROM ghcr.io/plc-lang/rust-llvm:latest-linux`
+`FROM ghcr.io/plc-lang/rust-llvm:latest`
