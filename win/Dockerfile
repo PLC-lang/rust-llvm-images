@@ -27,8 +27,13 @@ RUN Invoke-WebRequest -UserAgent 'DockerCI' github.com/ghaith/llvm-package-windo
 RUN Invoke-WebRequest -UserAgent 'DockerCI' https://win.rustup.rs -outfile C:/TEMP/rustup-init.exe
 RUN Invoke-WebRequest -UserAgent 'DockerCI' https://github.com/git-for-windows/git/releases/download/v$env:GIT_VERSION.windows.1/PortableGit-$env:GIT_VERSION-64-bit.7z.exe -outfile C:/TEMP/git-install.exe
 
+#Install 7zip
+RUN ./7zsetup /S /D=C:/buildtools/7z
+RUN setx /M PATH $($Env:PATH + ';C:/buildtools/7z/') 
+
 # Setup llvm sources
 ADD https://github.com/ghaith/llvm-package-windows/releases/download/v$LLVM_VER/LLVM-$LLVM_VER-win64.7z C:/TEMP/llvm.7z
+
 
 RUN 7z x C:/TEMP/llvm.7z -ollvm 
 
