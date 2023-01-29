@@ -1,4 +1,4 @@
-ARG DEBIAN_VERSION=bullseye
+ARG DEBIAN_VERSION=bookworm
 ARG BASE_IMAGE=debian:$DEBIAN_VERSION
 
 FROM $BASE_IMAGE
@@ -10,13 +10,14 @@ ARG RUST_VERSION=1.67.0
 ARG LLVM_VER=14
 
 # Use the bullseye llvm version because there is no newer one yet
-ARG LLVM_DEBIAN_VERSION=bullseye 
+ARG LLVM_DEBIAN_VERSION=bookworm 
 
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN dpkg --add-architecture arm64 \
 		&& apt-get update \
+		&& apt-get upgrade -y \
 		&& apt-get install \
 			apt-utils	\
 			wget gnupg curl \
@@ -25,13 +26,15 @@ RUN dpkg --add-architecture arm64 \
 			gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
 			-y
 
-# Setup llvm sources
-RUN echo "deb http://apt.llvm.org/$LLVM_DEBIAN_VERSION/ llvm-toolchain-$LLVM_DEBIAN_VERSION-$LLVM_VER  main" >> /etc/apt/sources.list.d/llvm.list
-RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+# # Setup llvm sources
+# RUN echo "deb http://apt.llvm.org/$LLVM_DEBIAN_VERSION/ llvm-toolchain-$LLVM_DEBIAN_VERSION-$LLVM_VER  main" >> /etc/apt/sources.list.d/llvm.list
+# RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 
-RUN apt-get update
+# RUN apt-get update
 #Install Clang dependencies
-RUN apt-get install -y zip clang-$LLVM_VER lldb-$LLVM_VER lld-$LLVM_VER clangd-$LLVM_VER liblld-$LLVM_VER-dev llvm-$LLVM_VER-dev
+#On bookworm clang is version 14, which is what we have as default.
+#Installing without versions here is convinient for scripts calling clang or lld instead of clang-14/lld-14
+RUN apt-get install -y zip clang lldb lld clangd clang-$LLVM_VER lldb-$LLVM_VER lld-$LLVM_VER clangd-$LLVM_VER liblld-$LLVM_VER-dev llvm-$LLVM_VER-dev
 
 ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
