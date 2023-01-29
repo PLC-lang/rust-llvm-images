@@ -21,11 +21,18 @@ jobs:
         config:
           - {
             os: "ubuntu-latest",
-            version: "linux"
+            version: "linux",
+            suffix: ""
+          }
+          - {
+            os: "ubuntu-latest",
+            version: "linux",
+            suffix: ".multi"
           }
           - {
             os: "windows-2022",
-            version: "win"
+            version: "win",
+            suffix: "",
           }
     permissions:
       packages: write
@@ -37,7 +44,7 @@ jobs:
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME 
+        run: docker build . --file Dockerfile${{ matrix.config.suffix }} --tag $IMAGE_NAME 
 
       - name: Log in to registry
         if: ${{ github.event_name != 'pull_request'}} # && matrix.config.version == 'linux'}}
@@ -48,7 +55,7 @@ jobs:
         shell: bash
         if: ${{ github.event_name != 'pull_request'}} # && matrix.config.version == 'linux'}}
         run: |
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME${{ matrix.config.suffix }}
 
           # Change all uppercase to lowercase
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
