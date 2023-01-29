@@ -1,13 +1,13 @@
 # escape=`
 
 # Use the latest Windows Server Core image with .NET Framework 4.8.
-FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019
+FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022
 
-ARG LLVM_VER=13.0.0
-ARG RUST_VER=1.60.0
+ARG LLVM_VER=14.0.6
+ARG RUST_VER=1.67.0
 
 # Install depedencies
-ARG 7ZIP_VERSION=2107
+ARG 7ZIP_VERSION=2201
 
 RUN mkdir C:\buildtools
 RUN mkdir C:\TEMP

@@ -3,8 +3,8 @@ ARG BASE_IMAGE=debian:$DEBIAN_VERSION
 
 FROM $BASE_IMAGE
 
-ARG RUST_VERSION=1.60
-ARG LLVM_VER=13
+ARG RUST_VERSION=1.67
+ARG LLVM_VER=14
 # Use the bullseye llvm version because there is no newer one yet
 ARG LLVM_DEBIAN_VERSION=bullseye 
 
