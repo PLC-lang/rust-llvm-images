@@ -14,7 +14,7 @@ env:
 jobs:
   # Push image to GitHub Packages.
   # See also https://docs.docker.com/docker-hub/builds/
-  push:
+  build-containers:
     runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
@@ -30,14 +30,30 @@ jobs:
     permissions:
       packages: write
       contents: read
-
+    outputs:
+      tag: ${{ steps.set-tag.outputs.TAG }}
     steps:
       - uses: actions/checkout@v3
+      - name: Set Tag
+        id: set-tag
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "main" ] && VERSION=latest
+          echo "IMAGE_ID=$IMAGE_ID" >> $GITHUB_OUTPUT
+          TAG=$IMAGE_ID:$VERSION
+          echo "TAG=$IMAGE_ID:$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME 
+        run: docker build . --file Dockerfile --tag $IMAGE_NAME
 
       - name: Log in to registry
         if: ${{ github.event_name != 'pull_request'}} # && matrix.config.version == 'linux'}}
@@ -48,17 +64,30 @@ jobs:
         shell: bash
         if: ${{ github.event_name != 'pull_request'}} # && matrix.config.version == 'linux'}}
         run: |
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+          TAG=${{ steps.set-tag.outputs.TAG }}-${{ matrix.os.version }}
+          docker tag $IMAGE_NAME $TAG
+          docker push $TAG
 
-          # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          # Strip "v" prefix from tag name
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "main" ] && VERSION=latest
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-          docker push $IMAGE_ID:$VERSION
+  publish-containers:
+    name: Publish docker images
+    runs-on: ubuntu-latest
+    needs: build-containers
+    if: ${{ github.event_name != 'pull_request'}} # && matrix.config.version == 'linux'}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Log in to registry
+        if: ${{ github.event_name != 'pull_request'}} # && matrix.config.version == 'linux'}}
+        # This is where you will update the PAT to GITHUB_TOKEN
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Docker Manifest
+        run: |
+          docker manifest create ${{ needs.build-containers.outputs.tag }} \
+           --amend ${{ needs.build-containers.outputs.tag }}-linux \
+           --amend ${{ needs.build-containers.outputs.tag }}-win \
+        - name: Docker push
+          run: |
+            docker manifest push ${{ needs.build-containers.outputs.tag }}
+
+
+      
