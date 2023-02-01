@@ -3,7 +3,7 @@ Docker images for Rust and LLVM
 
 Allows building Rust applications with the LLVM dependencies on both Windows and Linux
 
-For windows the images have to build locally after accepting the [Visual Studio license](https://go.microsoft.com/fwlink/?LinkId=2086102)
+For windows the images need to be built manually after accepting the [Visual Studio license](https://go.microsoft.com/fwlink/?LinkId=2086102)
 
 ## Building the image
 Build the image using 
