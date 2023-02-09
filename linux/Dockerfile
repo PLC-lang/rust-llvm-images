@@ -58,7 +58,7 @@ RUN chmod -R a+rw $CARGO_HOME \
 	&& chmod -R a+rw $RUSTUP_HOME
 
 #Install bininstall to make subsequent binaries easier to download
-RUN cargo install binstall
+RUN cargo install cargo-binstall
 #Install documentation and coverage tools
 RUN cargo binstall mdbook grcov
 
