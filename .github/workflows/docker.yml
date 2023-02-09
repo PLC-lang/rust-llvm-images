@@ -80,7 +80,7 @@ jobs:
 
   push-multiplatform:
     name: Push multi platform
-    needs: push
+    needs: build-linux
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' }}
     steps:
