@@ -58,7 +58,7 @@ RUN chmod -R a+rw $CARGO_HOME \
 	&& chmod -R a+rw $RUSTUP_HOME
 
 #Install bininstall to make subsequent binaries easier to download
-RUN cargo install cargo-binstall
+RUN wget -O - https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-`uname -m`-unknown-linux-musl.tgz | tar -xf - $CARGO_HOME/bin
 #Install documentation and coverage tools
 RUN cargo binstall --no-confirm mdbook grcov
 
