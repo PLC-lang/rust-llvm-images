@@ -21,11 +21,18 @@ jobs:
         config:
           - {
             os: "ubuntu-latest",
-            version: "linux"
+            version: "linux",
+            arch: "x86_64"
+          }
+          - {
+            os: "ubuntu-latest",
+            version: "linux",
+            arch: "arm64"
           }
           - {
             os: "windows-2022",
-            version: "win"
+            version: "windows",
+            arch: "x86_64"
           }
     permissions:
       packages: write
@@ -37,7 +44,7 @@ jobs:
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME 
+        run: docker buildx build . --platform ${{ matrix.config.version }}/${{matrix.config.arch}}  --file Dockerfile --tag $IMAGE_NAME
 
       - name: Log in to registry
         if: ${{ github.event_name != 'pull_request' && matrix.config.version == 'linux'}}
@@ -59,6 +66,27 @@ jobs:
           # Use Docker `latest` tag convention
           [ "$VERSION" == "main" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
+          echo VERSION=$VERSION_${{ matrix.config.version }}-${{ matrix.config.arch }}
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
+
+  push-multiplatform:
+    name: Push multi platform
+    needs: push
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - name: Get images
+        shell: bash
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "main" ] && VERSION=latest
+          docker buildx manifest create $IMAGE_ID:$VERSION $IMAGE_ID:$VERSION-arm64 $IMAGE_ID:$VERSION-x86_64
