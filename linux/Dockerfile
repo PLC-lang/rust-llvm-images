@@ -60,7 +60,7 @@ RUN chmod -R a+rw $CARGO_HOME \
 #Install bininstall to make subsequent binaries easier to download
 RUN cargo install cargo-binstall
 #Install documentation and coverage tools
-RUN cargo binstall mdbook grcov
+RUN cargo binstall --no-confirm mdbook grcov
 
 WORKDIR /build
 ENTRYPOINT ["bash"]
