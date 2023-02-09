@@ -78,6 +78,22 @@ jobs:
         shell: bash
         run: docker build . --tag $IMAGE_NAME
 
+  publish-devcontainer:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: "Publish Templates"
+        uses: devcontainers/action@v1
+        with:
+          publish-templates: "true"
+          base-path-to-templates: "./devcontainer"
+          generate-docs: "true"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
   push-multiplatform:
     name: Push multi platform
     needs: build-linux
