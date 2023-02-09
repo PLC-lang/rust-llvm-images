@@ -98,3 +98,4 @@ jobs:
           # Use Docker `latest` tag convention
           [ "$VERSION" == "main" ] && VERSION=latest
           docker buildx manifest create $IMAGE_ID:$VERSION $IMAGE_ID:$VERSION-arm64 $IMAGE_ID:$VERSION-x86_64
+          docker push $IMAGE_ID:$VERSION
