@@ -43,7 +43,7 @@ jobs:
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
-        run: docker buildx build . --platfrom ${{matrix.config.version}}/${{matrix.config.arch}}  --file Dockerfile --tag $IMAGE_NAME
+        run: docker buildx build . --platform ${{matrix.config.version}}/${{matrix.config.arch}}  --file Dockerfile --tag $IMAGE_NAME
 
       - name: Log in to registry
         if: ${{ github.event_name != 'pull_request' }}
