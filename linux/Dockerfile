@@ -52,8 +52,15 @@ RUN rustup toolchain install nightly  \
 		&& rustup component add --toolchain nightly llvm-tools-preview  \
 		&& rustup target add aarch64-unknown-linux-gnu \ 
 		&& rustup target add x86_64-unknown-linux-musl 
+
+
+RUN chmod -R a+rw $CARGO_HOME \
+	&& chmod -R a+rw $RUSTUP_HOME
+
+#Install bininstall to make subsequent binaries easier to download
+RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-`uname -m`-unknown-linux-musl.tgz && tar -xf cargo-binstall-`uname -m`-unknown-linux-musl.tgz  -C $CARGO_HOME/bin
 #Install documentation and coverage tools
-RUN cargo install mdbook grcov
+RUN cargo binstall --no-confirm mdbook grcov
 
 WORKDIR /build
 ENTRYPOINT ["bash"]
