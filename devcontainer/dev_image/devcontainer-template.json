@@ -1,0 +1,13 @@
+{
+    "id": "dev_image",
+    "version": "1.0.0",
+    "name": "Rust with LLVM Dev image",
+    "description": "A development image for Rust/LLVM based compiler development",
+    "documentationURL": "https://github.com/PLC-lang/rust-llvm-images/tree/main/devcontainer/dev-image/",
+    "licenseURL": "https://github.com/PLC-lang/rust-llvm-images/blob/main/LICENSE",
+    "options": {
+    },
+    "platforms": [
+        "Any"
+    ]
+}

@@ -14,7 +14,7 @@ env:
 jobs:
   # Push image to GitHub Packages.
   # See also https://docs.docker.com/docker-hub/builds/
-  push:
+  build-linux:
     runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
@@ -23,16 +23,19 @@ jobs:
             os: "ubuntu-latest",
             version: "linux",
             suffix: ""
+            arch: "x86_64"
           }
           - {
             os: "ubuntu-latest",
             version: "linux",
             suffix: ".multi"
+            arch: "x86_64"
           }
           - {
-            os: "windows-2022",
-            version: "win",
-            suffix: "",
+            os: "ubuntu-latest",
+            version: "linux",
+            suffix: ""
+            arch: "arm64"
           }
     permissions:
       packages: write
@@ -41,13 +44,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        if: ${{ matrix.config.arch == 'arm64' }}
+        uses: docker/setup-qemu-action@v1
+
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
-        run: docker build . --file Dockerfile${{ matrix.config.suffix }} --tag $IMAGE_NAME 
+        run: docker buildx build . --platform ${{matrix.config.version}}/${{matrix.config.arch}}  --file Dockerfile${{matrix.config.suffix}} --tag $IMAGE_NAME
 
       - name: Log in to registry
-        if: ${{ github.event_name != 'pull_request'}} # && matrix.config.version == 'linux'}}
+        if: ${{ github.event_name != 'pull_request' }}
         # This is where you will update the PAT to GITHUB_TOKEN
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
@@ -66,6 +74,54 @@ jobs:
           # Use Docker `latest` tag convention
           [ "$VERSION" == "main" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
+          echo VERSION=$VERSION_${{ matrix.config.version }}-${{ matrix.config.arch }}
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+
+  build-windows:
+    name: Run windows image build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build image
+        working-directory: windows
+        shell: bash
+        run: docker build . --tag $IMAGE_NAME
+
+  publish-devcontainer:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: "Publish Templates"
+        uses: devcontainers/action@v1
+        with:
+          publish-templates: "true"
+          base-path-to-templates: "./devcontainer"
+          generate-docs: "true"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  push-multiplatform:
+    name: Push multi platform
+    needs: build-linux
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - name: Get images
+        shell: bash
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "main" ] && VERSION=latest
+          docker buildx manifest create $IMAGE_ID:$VERSION $IMAGE_ID:$VERSION-arm64 $IMAGE_ID:$VERSION-x86_64
           docker push $IMAGE_ID:$VERSION

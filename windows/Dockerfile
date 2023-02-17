@@ -1,4 +1,7 @@
-FROM mcr.microsoft.com/windows/servercore:ltsc2022
+ARG WINDOWS_VERSION=ltsc2022
+ARG BASE_IMAGE=mcr.microsoft.com/windows/servercore:$WINDOWS_VERSION
+
+FROM $BASE_IMAGE
 
 ARG LLVM_VER=14.0.6
 ARG RUST_VER=1.67.0
