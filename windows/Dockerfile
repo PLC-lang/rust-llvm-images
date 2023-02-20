@@ -13,10 +13,10 @@ ARG GIT_VERSION=2.39.1
 WORKDIR C:/buildtools
 
 # Download channel for fixed install.
-ARG CHANNEL_URL=https://aka.ms/vs/16/release/channel
+ARG CHANNEL_URL=https://aka.ms/vs/17/release/channel
 ADD ${CHANNEL_URL} C:/TEMP/VisualStudio.chman
 
-ADD https://aka.ms/vs/16/release/vs_buildtools.exe C:/TEMP/vs_buildtools.exe
+ADD https://aka.ms/vs/17/release/vs_buildtools.exe C:/TEMP/vs_buildtools.exe
 RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache --installPath C:/buildtools \
 				# --all
 				--add Microsoft.Component.MSBuild \
