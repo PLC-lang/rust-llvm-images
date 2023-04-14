@@ -19,6 +19,7 @@ RUN apt-get update \
 		&& apt-get upgrade -y \
 		&& apt-get install \
 			apt-utils	\
+			git	\
 			wget gnupg curl \
 			build-essential \
 			libz-dev \

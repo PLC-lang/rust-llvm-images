@@ -22,19 +22,19 @@ jobs:
           - {
             os: "ubuntu-latest",
             version: "linux",
-            suffix: ""
+            suffix: "",
             arch: "x86_64"
           }
           - {
             os: "ubuntu-latest",
             version: "linux",
-            suffix: ".multi"
+            suffix: ".multi",
             arch: "x86_64"
           }
           - {
             os: "ubuntu-latest",
             version: "linux",
-            suffix: ""
+            suffix: "",
             arch: "arm64"
           }
     permissions:
@@ -73,8 +73,10 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
           # Use Docker `latest` tag convention
           [ "$VERSION" == "main" ] && VERSION=latest
+          #Add the platform to the version
+          VERSION=$VERSION-${{ matrix.config.arch }}
           echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION_${{ matrix.config.version }}-${{ matrix.config.arch }}
+          echo VERSION=$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
 
@@ -110,6 +112,11 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' }}
     steps:
+      - name: Log in to registry
+        if: ${{ github.event_name != 'pull_request' }}
+        # This is where you will update the PAT to GITHUB_TOKEN
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        
       - name: Get images
         shell: bash
         run: |
@@ -123,5 +130,5 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
           # Use Docker `latest` tag convention
           [ "$VERSION" == "main" ] && VERSION=latest
-          docker buildx manifest create $IMAGE_ID:$VERSION $IMAGE_ID:$VERSION-arm64 $IMAGE_ID:$VERSION-x86_64
-          docker push $IMAGE_ID:$VERSION
+          docker manifest create $IMAGE_ID:$VERSION $IMAGE_ID:$VERSION-arm64 $IMAGE_ID:$VERSION-x86_64
+          docker manifest push $IMAGE_ID:$VERSION
