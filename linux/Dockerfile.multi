@@ -1,0 +1,133 @@
+ARG DEBIAN_VERSION=bookworm
+ARG BASE_IMAGE=debian:$DEBIAN_VERSION
+
+## Build step
+FROM $BASE_IMAGE as base
+
+# Make sure we are on root
+USER root
+
+ARG LLVM_VER=14
+# Use the bullseye llvm version because there is no newer one yet
+ARG LLVM_DEBIAN_VERSION=bookworm 
+
+# Avoid warnings by switching to noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get clean ; apt-get update && apt-get upgrade -y
+
+RUN dpkg --add-architecture arm64 \
+		&& apt-get update \
+		&& apt-get install \
+			apt-utils	\
+			wget gnupg curl \
+			build-essential \
+			libz-dev \
+			gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+			-y
+
+# Setup llvm sources
+# RUN echo "deb http://apt.llvm.org/$LLVM_DEBIAN_VERSION/ llvm-toolchain-$LLVM_DEBIAN_VERSION-$LLVM_VER  main" >> /etc/apt/sources.list.d/llvm.list
+# RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+
+RUN apt-get update
+#Install Clang dependencies
+RUN apt-get install -y \
+		zip clang lldb lld clangd \
+		clang-$LLVM_VER lldb-$LLVM_VER lld-$LLVM_VER \
+		clangd-$LLVM_VER liblld-$LLVM_VER-dev llvm-$LLVM_VER-dev \
+		liblld-$LLVM_VER-dev llvm-$LLVM_VER-dev \
+		libpolly-$LLVM_VER-dev \
+		git python3-distutils 
+		# liblzma-dev:arm64 libxml2-dev libxml2-dev:arm64 \
+		# libffi-dev:arm64 zlib1g-dev:arm64 
+		# libgcc-10-dev:arm64 \
+		# libstdc++-10-dev:arm64
+
+RUN dpkg --add-architecture arm64 && apt-get update
+RUN apt-get install -y \
+	liblzma-dev:arm64 \
+	libxml2-dev:arm64 \
+	libffi-dev:arm64 \
+	zlib1g-dev:arm64 \
+	libgcc-12-dev:arm64 \
+	libstdc++-12-dev:arm64 \
+	libtinfo6:arm64
+
+RUN ln -s /usr/lib/aarch64-linux-gnu/libtinfo.so.6 /usr/lib/aarch64-linux-gnu/libtinfo.so \
+	&& ln -s /usr/lib/aarch64-linux-gnu/libgcc_s.so.1 /usr/lib/aarch64-linux-gnu/libgcc_s.so \
+	&& ln -s /usr/lib/aarch64-linux-gnu/libstdc++.so.6 /usr/lib/aarch64-linux-gnu/libstdc++.so
+
+from base as builder
+
+ARG LLVM_BUILD_VER=14.0.6
+
+RUN apt-get install -y cmake 
+
+RUN wget https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip -O /tmp/ninja.zip
+RUN unzip /tmp/ninja.zip -d /usr/bin && chmod +x /usr/bin/ninja
+
+#Download llvm
+RUN git clone --depth 1 https://github.com/llvm/llvm-project.git -b llvmorg-$LLVM_BUILD_VER /opt/llvm-sources
+
+RUN rm -rf /opt/build_aarch64
+RUN mkdir -p /opt/build_aarch64
+WORKDIR /opt/build_aarch64 
+
+
+RUN cmake \
+	-G "Ninja" \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_SYSTEM_NAME=Linux \
+	-DCMAKE_C_COMPILER="clang" \
+	-DCMAKE_CXX_COMPILER="clang++" \
+	-DCMAKE_C_FLAGS="-fuse-ld=lld --target=aarch64-unknown-linux-gnu" \
+	-DCMAKE_CXX_FLAGS="-fuse-ld=lld --target=aarch64-unknown-linux-gnu" \
+	-DCMAKE_INSTALL_PREFIX=/opt/llvm-aarch64/ \
+	-DLLVM_ENABLE_PROJECTS="clang;lld;polly" \
+	-DLLVM_USE_LINKER=lld \
+	-DLLVM_INCLUDE_EXAMPLES=OFF \
+	-DLLVM_INCLUDE_TESTS=OFF \
+	-DLLVM_ENABLE_PIC=OFF \
+	-DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-unknown-linux-gnu  \
+	-DLLVM_TARGET_ARCH=AARCH64 \
+	/opt/llvm-sources/llvm
+
+RUN cmake --build . --parallel
+RUN cmake --install .
+
+#Copy the native tools to the bin folder
+RUN cp NATIVE/bin/* /opt/llvm-aarch64/bin/
+
+# Final image
+FROM base
+
+ARG RUST_VERSION=1.67
+
+#Copy the built llvm
+# COPY --from=builder /opt/llvm /opt/llvm
+COPY --from=builder /opt/llvm-aarch64 /opt/llvm-aarch64
+
+ENV PATH="/opt/llvm/bin:${PATH}"
+
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
+# Get Rust
+RUN curl https://sh.rustup.rs -sSf | bash -s -- --profile minimal --default-toolchain none -y
+ENV PATH="${CARGO_HOME}/bin:${PATH}"
+
+RUN rustup toolchain install nightly  \
+		&& rustup toolchain install $RUST_VERSION \
+		&& rustup default $RUST_VERSION \
+		&& rustup component add clippy rustfmt llvm-tools-preview  \
+		&& rustup component add --toolchain nightly llvm-tools-preview  \
+		&& rustup target add aarch64-unknown-linux-gnu \ 
+		&& rustup target add x86_64-unknown-linux-musl 
+#Install documentation and coverage tools
+RUN cargo install mdbook grcov
+
+WORKDIR /build
+ENTRYPOINT ["bash"]
+
+# Switch back to dialog for any ad-hoc use of apt-get
+ENV DEBIAN_FRONTEND=dialog
