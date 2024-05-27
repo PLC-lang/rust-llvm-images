@@ -46,11 +46,9 @@ ENV RUSTUP_HOME=/usr/local/rustup
 RUN curl https://sh.rustup.rs -sSf | bash -s -- --profile minimal --default-toolchain none -y
 ENV PATH="${CARGO_HOME}/bin:${PATH}"
 
-RUN rustup toolchain install nightly  \
-		&& rustup toolchain install $RUST_VERSION \
+RUN rustup toolchain install $RUST_VERSION \
 		&& rustup default $RUST_VERSION \
 		&& rustup component add clippy rustfmt llvm-tools-preview  \
-		&& rustup component add --toolchain nightly llvm-tools-preview  \
 		&& rustup target add aarch64-unknown-linux-gnu \ 
 		&& rustup target add x86_64-unknown-linux-musl 
 
@@ -61,7 +59,7 @@ RUN chmod -R a+rw $CARGO_HOME \
 #Install bininstall to make subsequent binaries easier to download
 RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-`uname -m`-unknown-linux-musl.tgz && tar -xf cargo-binstall-`uname -m`-unknown-linux-musl.tgz  -C $CARGO_HOME/bin
 #Install documentation and coverage tools
-RUN cargo binstall --no-confirm mdbook grcov
+RUN cargo binstall --no-confirm mdbook grcov nextest
 
 WORKDIR /build
 ENTRYPOINT ["bash"]
