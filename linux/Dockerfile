@@ -59,7 +59,7 @@ RUN chmod -R a+rw $CARGO_HOME \
 #Install bininstall to make subsequent binaries easier to download
 RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-`uname -m`-unknown-linux-musl.tgz && tar -xf cargo-binstall-`uname -m`-unknown-linux-musl.tgz  -C $CARGO_HOME/bin
 #Install documentation and coverage tools
-RUN cargo binstall --no-confirm mdbook grcov nextest
+RUN cargo binstall --no-confirm mdbook grcov cargo-nextest
 
 WORKDIR /build
 ENTRYPOINT ["bash"]

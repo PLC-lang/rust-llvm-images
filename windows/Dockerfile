@@ -47,7 +47,7 @@ RUN C:/TEMP/rustup-init.exe --default-toolchain $env:RUST_VER -y
 RUN rustup install stable
 
 RUN rustup component add llvm-tools-preview 
-RUN cargo install mdbook grcov nextest
+RUN cargo install mdbook grcov cargo-nextest
 
 RUN setx /M PATH $($Env:PATH + ';C:/buildtools/llvm/bin') 
 
