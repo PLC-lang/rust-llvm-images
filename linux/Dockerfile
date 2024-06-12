@@ -23,7 +23,8 @@ RUN apt-get update \
 			wget gnupg curl \
 			build-essential \
 			libz-dev \
-			gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+			gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+			python3-venv
 
 # dpkg --add-architecture arm64 \
 
@@ -40,13 +41,12 @@ RUN apt-get install -y zip clang lldb lld clangd \
 	llvm-$LLVM_VER-dev libpolly-$LLVM_VER-dev
 
 # Install llvm-lit, which we use for correctness tests
-RUN apt-get install -y python3-venv
-RUN python3 -m venv /opt/venv
-RUN /opt/venv/bin/python -m pip install --upgrade pip
-RUN /opt/venv/bin/python -m pip install pipx
-RUN /opt/venv/bin/pipx install lit
-RUN /opt/venv/bin/pipx ensurepath
-RUN /opt/venv/bin/pipx ensurepath --global
+RUN python3 -m venv /opt/venv \
+	&& /opt/venv/bin/python -m pip install --upgrade pip \
+	&& /opt/venv/bin/python -m pip install pipx \
+	&& /opt/venv/bin/pipx install lit \
+	&& /opt/venv/bin/pipx ensurepath \
+	&& /opt/venv/bin/pipx ensurepath --global
 
 ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
