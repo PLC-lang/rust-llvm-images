@@ -17,21 +17,20 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
 		&& apt-get upgrade -y \
-		&& apt-get install \
+		&& apt-get install -y \
 			apt-utils	\
 			git	\
 			wget gnupg curl \
 			build-essential \
 			libz-dev \
-			gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-			-y
+			gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
 # dpkg --add-architecture arm64 \
 
 # # Setup llvm sources
 # RUN echo "deb http://apt.llvm.org/$LLVM_DEBIAN_VERSION/ llvm-toolchain-$LLVM_DEBIAN_VERSION-$LLVM_VER  main" >> /etc/apt/sources.list.d/llvm.list
 # RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 
-# RUN apt-get update
 #Install Clang dependencies
 #On bookworm clang is version 14, which is what we have as default.
 #Installing without versions here is convinient for scripts calling clang or lld instead of clang-14/lld-14
@@ -39,6 +38,15 @@ RUN apt-get install -y zip clang lldb lld clangd \
 	clang-$LLVM_VER lldb-$LLVM_VER lld-$LLVM_VER \
 	clangd-$LLVM_VER liblld-$LLVM_VER-dev \
 	llvm-$LLVM_VER-dev libpolly-$LLVM_VER-dev
+
+# Install llvm-lit, which we use for correctness tests
+RUN apt-get install -y python3-venv
+RUN python3 -m venv /opt/venv
+RUN /opt/venv/bin/python -m pip install --upgrade pip
+RUN /opt/venv/bin/python -m pip install pipx
+RUN /opt/venv/bin/pipx install lit
+RUN /opt/venv/bin/pipx ensurepath
+RUN /opt/venv/bin/pipx ensurepath --global
 
 ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
