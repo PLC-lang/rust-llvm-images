@@ -41,6 +41,7 @@ RUN apt-get install -y zip clang lldb lld clangd \
 	llvm-$LLVM_VER-dev libpolly-$LLVM_VER-dev
 
 # Install llvm-lit, which we use for correctness tests
+ENV PIPX_BIN_DIR=/usr/local/bin
 RUN python3 -m venv /opt/venv \
 	&& /opt/venv/bin/python -m pip install --upgrade pip \
 	&& /opt/venv/bin/python -m pip install pipx \
