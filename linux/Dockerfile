@@ -6,7 +6,7 @@ FROM $BASE_IMAGE
 # Make sure we are on root
 USER root
 
-ARG RUST_VERSION=1.77.0
+ARG RUST_VERSION=1.80.1
 ARG LLVM_VER=14
 
 # Use the bullseye llvm version because there is no newer one yet
