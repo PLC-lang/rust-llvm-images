@@ -48,7 +48,7 @@ RUN VER=$(curl --silent -qI https://github.com/astral-sh/uv/releases/latest | aw
 ENV PATH="/usr/local/uv:${PATH}"
 ENV UV_TOOL_DIR="/usr/local/uv"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
-RUN uv tool install lit
+RUN /usr/local/uv/uv tool install lit
 
 ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
