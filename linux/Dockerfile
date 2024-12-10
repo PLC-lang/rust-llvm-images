@@ -41,14 +41,14 @@ RUN apt-get install -y zip clang lldb lld clangd \
 	llvm-$LLVM_VER-dev libpolly-$LLVM_VER-dev
 
 # Install llvm-lit, which we use for correctness tests
-RUN VER=$(curl --silent -qI https://github.com/astral-sh/uv/releases/latest | awk -F '/' '/^location/ {print  substr($NF, 1, length($NF)-1)}'); \
-	wget 	https://github.com/astral-sh/uv/releases/download/${VER}/uv-`uname -m`-unknown-linux-gnu.tar.gz -O uv.tar.gz \
-	&& tar xvzf uv.tar.gz --directory=/usr/local/ \
-	&& mv /usr/local/uv-`uname -m`-unknown-linux-gnu /usr/local/uv/ 
-ENV PATH="/usr/local/uv:${PATH}"
+ENV XDG_BIN_HOME=/usr/local/bin
+# Download the latest installer
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+# Run the installer then remove it
+RUN sh /uv-installer.sh && rm /uv-installer.sh && mkdir -p /usr/local/uv
 ENV UV_TOOL_DIR="/usr/local/uv"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
-RUN /usr/local/uv/uv tool install lit
+RUN uv tool install lit
 
 ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
