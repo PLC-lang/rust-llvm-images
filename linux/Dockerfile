@@ -42,9 +42,9 @@ RUN apt-get install -y zip clang lldb lld clangd \
 
 # Install llvm-lit, which we use for correctness tests
 RUN VER=$(curl --silent -qI https://github.com/astral-sh/uv/releases/latest | awk -F '/' '/^location/ {print  substr($NF, 1, length($NF)-1)}'); \
-	wget 	https://github.com/astral-sh/uv/releases/download/${VER}/uv-x86_64-unknown-linux-gnu.tar.gz -O uv.tar.gz \
+	wget 	https://github.com/astral-sh/uv/releases/download/${VER}/uv-`uname -m`-unknown-linux-gnu.tar.gz -O uv.tar.gz \
 	&& tar xvzf uv.tar.gz --directory=/usr/local/ \
-	&& mv /usr/local/uv-x86_64-unknown-linux-gnu /usr/local/uv/ 
+	&& mv /usr/local/uv-`uname -m`-unknown-linux-gnu /usr/local/uv/ 
 ENV PATH="/usr/local/uv:${PATH}"
 ENV UV_TOOL_DIR="/usr/local/uv"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
