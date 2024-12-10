@@ -6,7 +6,7 @@ FROM $BASE_IMAGE
 # Make sure we are on root
 USER root
 
-ARG RUST_VERSION=1.82
+ARG RUST_VERSION=1.83
 ARG LLVM_VER=14
 
 # Use the bullseye llvm version because there is no newer one yet
@@ -41,13 +41,14 @@ RUN apt-get install -y zip clang lldb lld clangd \
 	llvm-$LLVM_VER-dev libpolly-$LLVM_VER-dev
 
 # Install llvm-lit, which we use for correctness tests
-ENV PIPX_BIN_DIR=/usr/local/bin
-RUN python3 -m venv /opt/venv \
-	&& /opt/venv/bin/python -m pip install --upgrade pip \
-	&& /opt/venv/bin/python -m pip install pipx \
-	&& /opt/venv/bin/pipx install lit \
-	&& /opt/venv/bin/pipx ensurepath \
-	&& /opt/venv/bin/pipx ensurepath --global
+RUN VER=$(curl --silent -qI https://github.com/astral-sh/uv/releases/latest | awk -F '/' '/^location/ {print  substr($NF, 1, length($NF)-1)}'); \
+	wget 	https://github.com/astral-sh/uv/releases/download/${VER}/uv-x86_64-unknown-linux-gnu.tar.gz -O uv.tar.gz \
+	&& tar xvzf uv.tar.gz --directory=/usr/local/ \
+	&& mv /usr/local/uv-x86_64-unknown-linux-gnu /usr/local/uv/ 
+ENV PATH="/usr/local/uv:${PATH}"
+ENV UV_TOOL_DIR="/usr/local/uv"
+ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
+RUN uv tool install lit
 
 ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
@@ -63,7 +64,9 @@ RUN rustup toolchain install $RUST_VERSION \
 
 
 RUN chmod -R a+rw $CARGO_HOME \
-	&& chmod -R a+rw $RUSTUP_HOME
+	&& chmod -R a+rw $RUSTUP_HOME \
+	&& chmod -R a+rw /usr/local/uv \ 
+	&& chmod -R a+rw /usr/local/bin
 
 #Install bininstall to make subsequent binaries easier to download
 RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-`uname -m`-unknown-linux-musl.tgz && tar -xf cargo-binstall-`uname -m`-unknown-linux-musl.tgz  -C $CARGO_HOME/bin
