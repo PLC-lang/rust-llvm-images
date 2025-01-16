@@ -22,11 +22,19 @@ jobs:
           - {
             os: "ubuntu-latest",
             version: "linux",
+            suffix: "",
             arch: "x86_64"
           }
           - {
             os: "ubuntu-latest",
             version: "linux",
+            suffix: ".multi",
+            arch: "x86_64"
+          }
+          - {
+            os: "ubuntu-latest",
+            version: "linux",
+            suffix: "",
             arch: "arm64"
           }
     permissions:
@@ -35,7 +43,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-# https://github.com/docker/setup-qemu-action
+
+      # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
         if: ${{ matrix.config.arch == 'arm64' }}
         uses: docker/setup-qemu-action@v1
@@ -43,7 +52,7 @@ jobs:
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
-        run: docker buildx build . --platform ${{matrix.config.version}}/${{matrix.config.arch}}  --file Dockerfile --tag $IMAGE_NAME
+        run: docker buildx build . --platform ${{matrix.config.version}}/${{matrix.config.arch}}  --file Dockerfile${{matrix.config.suffix}} --tag $IMAGE_NAME
 
       - name: Log in to registry
         if: ${{ github.event_name != 'pull_request' }}
@@ -52,9 +61,9 @@ jobs:
 
       - name: Push image
         shell: bash
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request'}} # && matrix.config.version == 'linux'}}
         run: |
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME${{ matrix.config.suffix }}
 
           # Change all uppercase to lowercase
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
@@ -70,6 +79,7 @@ jobs:
           echo VERSION=$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
+
   build-windows:
     name: Run windows image build
     runs-on: windows-latest
