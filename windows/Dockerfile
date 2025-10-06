@@ -52,9 +52,6 @@ RUN rustup install stable
 RUN rustup component add llvm-tools-preview 
 RUN cargo install mdbook grcov cargo-nextest
 
-RUN setx /M PATH $($Env:PATH + ';C:/buildtools/llvm/bin') 
-
-
 #RUN cargo install cargo-watch #Activate this for local builds to enable watching
 WORKDIR C:/build
 
