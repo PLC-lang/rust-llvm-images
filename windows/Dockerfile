@@ -21,32 +21,27 @@ RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache \
     --channelUri C:/TEMP/VisualStudio.chman \
     --installChannelUri C:/TEMP/VisualStudio.chman \
     --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended \
-    --installPath C:/BuildTools
+    --installPath C:/buildtools
 
-
-SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
-
-RUN Invoke-WebRequest -UserAgent 'DockerCI' -outfile 7zsetup.exe https://www.7-zip.org/a/7z$env:ZIP_VERSION-x64.exe
-RUN Invoke-WebRequest -UserAgent 'DockerCI' github.com/ghaith/llvm-package-windows/releases/download/v$env:LLVM_VER/LLVM-$env:LLVM_VER-win64.7z -outfile C:/TEMP/llvm.7z
-RUN Invoke-WebRequest -UserAgent 'DockerCI' https://win.rustup.rs -outfile C:/TEMP/rustup-init.exe
-RUN Invoke-WebRequest -UserAgent 'DockerCI' https://github.com/git-for-windows/git/releases/download/v$env:GIT_VERSION.windows.1/PortableGit-$env:GIT_VERSION-64-bit.7z.exe -outfile C:/TEMP/git-install.exe
-
+ADD https://www.7-zip.org/a/7z${ZIP_VERSION}-x64.exe 7zsetup.exe
 #Install 7zip
-RUN ./7zsetup /S /D=C:/buildtools/7z
-RUN setx /M PATH $($Env:PATH + ';C:/buildtools/7z/') 
+RUN 7zsetup.exe /S /D=C:/buildtools/7z
+
+RUN setx /M PATH "%PATH%;C:\\buildtools\\7z;C:\\buildtools\\llvm\\bin"
+
+ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.windows.1/PortableGit-${GIT_VERSION}-64-bit.7z.exe C:/TEMP/git-install.exe
 # Install git to use bash
 RUN 7z.exe x C:/TEMP/git-install.exe -ogit
 
+ADD https://github.com/ghaith/llvm-package-windows/releases/download/v${LLVM_VER}/LLVM-${LLVM_VER}-win64.7z C:/TEMP/llvm.7z
 # Setup llvm sources
-ADD https://github.com/ghaith/llvm-package-windows/releases/download/v$LLVM_VER/LLVM-$LLVM_VER-win64.7z C:/TEMP/llvm.7z
-
-
 RUN 7z x C:/TEMP/llvm.7z -ollvm 
 
+ADD https://win.rustup.rs C:/TEMP/rustup-init.exe
 # Install Rust
 # RUN scoop install rustup
 ADD https://win.rustup.rs C:/TEMP/rustup-init.exe
-RUN C:/TEMP/rustup-init.exe --default-toolchain $env:RUST_VER -y
+RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VER% -y
 RUN rustup install stable
 
 RUN rustup component add llvm-tools-preview 
@@ -54,6 +49,8 @@ RUN cargo install mdbook grcov cargo-nextest
 
 #RUN cargo install cargo-watch #Activate this for local builds to enable watching
 WORKDIR C:/build
+
+SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
 
 #ENTRYPOINT ["cargo"]
 ENTRYPOINT ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "C:\\buildtools\\git\\bin\\bash.exe", "-i", "-l"]
