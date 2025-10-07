@@ -25,7 +25,7 @@ jobs:
             arch: "x86_64"
           }
           - {
-            os: "ubuntu-latest",
+            os: "ubuntu-24.04-arm",
             version: "linux",
             arch: "arm64"
           }
@@ -35,11 +35,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-# https://github.com/docker/setup-qemu-action
-      - name: Set up QEMU
-        if: ${{ matrix.config.arch == 'arm64' }}
-        uses: docker/setup-qemu-action@v1
-
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
