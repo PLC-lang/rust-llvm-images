@@ -14,6 +14,9 @@ RUN apt update \
     && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh $LLVM_VERSION \
     && apt install -y --no-install-recommends clang lld liblld-$LLVM_VERSION-dev libpolly-$LLVM_VERSION-dev
 
+# TODO: Remove this once we completely switched over to LLVM 21
+RUN apt install -y zip clang lldb lld clangd clang-14 lldb-14 lld-14 clangd-14 liblld-14-dev llvm-14-dev libpolly-14-dev
+
 # Install llvm-lit, used by our correctness tests
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /uvx /bin/
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
