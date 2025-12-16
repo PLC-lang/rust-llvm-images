@@ -1,4 +1,7 @@
-FROM debian:bookworm
+ARG DEBIAN_VERSION=bookworm
+ARG BASE_IMAGE=debian:$DEBIAN_VERSION
+
+FROM $BASE_IMAGE
 USER root
 
 # Avoid warnings by switching to noninteractive
