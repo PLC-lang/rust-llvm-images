@@ -8,7 +8,7 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG LLVM_VERSION=21
-ARG RUST_VERSION=1.90
+ARG RUST_VERSION=1.93.1
 
 # Install LLVM and its dependencies
 RUN apt update \
@@ -19,6 +19,8 @@ RUN apt update \
 
 # Install llvm-lit, used by our correctness tests
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /uvx /bin/
+# Use a non root directory for uv
+ENV UV_TOOL_DIR="/usr/local/uv"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
 RUN uv tool install lit
 
@@ -32,8 +34,10 @@ ENV PATH="${CARGO_HOME}/bin:${PATH}"
 RUN rustup toolchain install $RUST_VERSION \
     && rustup default $RUST_VERSION \
     && rustup component add clippy rustfmt llvm-tools-preview \
+    && rustup target add x86_64-unknown-linux-gnu \
     && rustup target add aarch64-unknown-linux-gnu \
-    && rustup target add x86_64-unknown-linux-musl
+    && rustup target add x86_64-unknown-linux-musl \
+    && rustup target add aarch64-unknown-linux-musl
 
 RUN chmod -R a+rw $CARGO_HOME \
     && chmod -R a+rw $RUSTUP_HOME \
