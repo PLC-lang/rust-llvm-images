@@ -13,7 +13,7 @@ ARG RUST_VERSION=1.93.1
 # Install LLVM and its dependencies
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends wget curl gnupg build-essential lsb-release \
+    && apt-get install -y --no-install-recommends wget curl gnupg build-essential lsb-release ca-certificates \
     && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh $LLVM_VERSION \
     && apt-get install -y --no-install-recommends clang lld liblld-$LLVM_VERSION-dev libpolly-$LLVM_VERSION-dev
 
