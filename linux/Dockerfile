@@ -11,11 +11,11 @@ ARG LLVM_VERSION=21
 ARG RUST_VERSION=1.93.1
 
 # Install LLVM and its dependencies
-RUN apt update \
-    && apt upgrade -y \
-    && apt install -y --no-install-recommends wget curl gnupg build-essential lsb-release software-properties-common \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends wget curl gnupg build-essential lsb-release \
     && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh $LLVM_VERSION \
-    && apt install -y --no-install-recommends clang lld liblld-$LLVM_VERSION-dev libpolly-$LLVM_VERSION-dev
+    && apt-get install -y --no-install-recommends clang lld liblld-$LLVM_VERSION-dev libpolly-$LLVM_VERSION-dev
 
 # Install llvm-lit, used by our correctness tests
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /uvx /bin/
