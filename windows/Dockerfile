@@ -45,7 +45,7 @@ RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VER% -y
 RUN rustup install stable
 
 RUN rustup component add llvm-tools-preview 
-RUN cargo install mdbook grcov cargo-nextest
+RUN cargo install --locked mdbook grcov cargo-nextest
 
 #RUN cargo install cargo-watch #Activate this for local builds to enable watching
 WORKDIR C:/build
