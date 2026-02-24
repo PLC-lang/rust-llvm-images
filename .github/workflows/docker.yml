@@ -7,6 +7,13 @@ on:
       - "v*"
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_windows:
+        description: 'Run full Windows image build'
+        required: false
+        type: boolean
+        default: false
 
 env:
   IMAGE_NAME: rust-llvm
@@ -65,9 +72,25 @@ jobs:
           echo VERSION=$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
+  validate-windows:
+    name: Validate Windows Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: windows/Dockerfile
+          # DL3020: Use COPY instead of ADD - we use ADD for URLs which is valid
+          # DL3059: Multiple consecutive RUN - acceptable for clarity in Windows Dockerfiles
+          # SC1001: Escape sequences - Windows uses backtick, not backslash
+          ignore: DL3020,DL3059,SC1001
+
   build-windows:
-    name: Run windows image build
+    name: Build Windows image
     runs-on: windows-2022
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_windows }}
     steps:
       - uses: actions/checkout@v3
       - name: Build image
