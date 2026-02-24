@@ -118,6 +118,7 @@ jobs:
           UPDATES=""
           HAS_UPDATE=false
           
+          # Only Rust and LLVM updates trigger a rebuild
           if [ "${{ steps.current.outputs.rust }}" != "${{ steps.latest.outputs.rust }}" ]; then
             UPDATES="${UPDATES}- Rust: ${{ steps.current.outputs.rust }} → ${{ steps.latest.outputs.rust }}\n"
             HAS_UPDATE=true
@@ -128,14 +129,15 @@ jobs:
             HAS_UPDATE=true
           fi
           
-          if [ "${{ steps.current.outputs.git }}" != "${{ steps.latest.outputs.git }}" ]; then
-            UPDATES="${UPDATES}- Git: ${{ steps.current.outputs.git }} → ${{ steps.latest.outputs.git }}\n"
-            HAS_UPDATE=true
-          fi
-          
-          if [ "${{ steps.current.outputs.sevenzip }}" != "${{ steps.latest.outputs.sevenzip }}" ]; then
-            UPDATES="${UPDATES}- 7-Zip: ${{ steps.current.outputs.sevenzip }} → ${{ steps.latest.outputs.sevenzip }}\n"
-            HAS_UPDATE=true
+          # Git and 7-Zip are updated opportunistically (only if we're already rebuilding)
+          if [ "$HAS_UPDATE" = true ]; then
+            if [ "${{ steps.current.outputs.git }}" != "${{ steps.latest.outputs.git }}" ]; then
+              UPDATES="${UPDATES}- Git: ${{ steps.current.outputs.git }} → ${{ steps.latest.outputs.git }}\n"
+            fi
+            
+            if [ "${{ steps.current.outputs.sevenzip }}" != "${{ steps.latest.outputs.sevenzip }}" ]; then
+              UPDATES="${UPDATES}- 7-Zip: ${{ steps.current.outputs.sevenzip }} → ${{ steps.latest.outputs.sevenzip }}\n"
+            fi
           fi
           
           if [ "$HAS_UPDATE" = true ]; then
