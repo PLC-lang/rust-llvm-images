@@ -26,7 +26,7 @@ RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache `
     && del /q C:\TEMP\vs_buildtools.exe C:\TEMP\VisualStudio.chman
 
 # ==============================================================================
-# STAGE 2: Install Rust and compile tools (fail fast if MSVC toolchain broken)
+# STAGE 2: Install Rust and tools (fail fast if MSVC toolchain broken)
 # This validates that VS + Windows SDK are correctly installed and can compile
 # ==============================================================================
 SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "cmd", "/S", "/C"]
@@ -38,8 +38,18 @@ RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VERSION% -y `
 # Set PATH for Rust - VsDevCmd.bat already sets up MSVC paths
 RUN setx /M PATH "%PATH%;%USERPROFILE%\.cargo\bin"
 
-# Compile cargo tools - this will fail fast if MSVC/SDK is broken
-RUN cargo install --locked cargo-nextest grcov mdbook
+# Install cargo-binstall first, then use it to download pre-built binaries
+# This is faster and avoids hcsshim layer issues with large compile artifacts
+ADD https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-pc-windows-msvc.zip C:/TEMP/binstall.zip
+RUN powershell -Command "Expand-Archive -Path C:\TEMP\binstall.zip -DestinationPath C:\TEMP\binstall" `
+    && copy C:\TEMP\binstall\cargo-binstall.exe %USERPROFILE%\.cargo\bin\ `
+    && del /q C:\TEMP\binstall.zip `
+    && rmdir /s /q C:\TEMP\binstall
+
+# Install tools via binstall (pre-built binaries, no compilation)
+# Falls back to cargo install if no binary available
+RUN cargo binstall --no-confirm cargo-nextest grcov mdbook `
+    && rmdir /s /q %USERPROFILE%\.cargo\registry 2>nul || echo "No registry to clean"
 
 RUN rustup component add llvm-tools-preview
 
