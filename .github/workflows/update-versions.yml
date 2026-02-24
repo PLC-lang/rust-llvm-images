@@ -31,127 +31,29 @@ jobs:
   check-updates:
     runs-on: ubuntu-latest
     outputs:
-      rust_current: ${{ steps.current.outputs.rust }}
-      rust_latest: ${{ steps.latest.outputs.rust }}
-      llvm_current: ${{ steps.current.outputs.llvm }}
-      llvm_latest: ${{ steps.latest.outputs.llvm }}
-      llvm_major: ${{ steps.latest.outputs.llvm_major }}
-      git_current: ${{ steps.current.outputs.git }}
-      git_latest: ${{ steps.latest.outputs.git }}
-      sevenzip_current: ${{ steps.current.outputs.sevenzip }}
-      sevenzip_latest: ${{ steps.latest.outputs.sevenzip }}
-      has_update: ${{ steps.compare.outputs.has_update }}
-      update_summary: ${{ steps.compare.outputs.summary }}
+      rust_current: ${{ steps.check.outputs.rust_current }}
+      rust_latest: ${{ steps.check.outputs.rust_latest }}
+      llvm_current: ${{ steps.check.outputs.llvm_current }}
+      llvm_latest: ${{ steps.check.outputs.llvm_latest }}
+      llvm_major: ${{ steps.check.outputs.llvm_major }}
+      git_current: ${{ steps.check.outputs.git_current }}
+      git_latest: ${{ steps.check.outputs.git_latest }}
+      sevenzip_current: ${{ steps.check.outputs.sevenzip_current }}
+      sevenzip_latest: ${{ steps.check.outputs.sevenzip_latest }}
+      has_update: ${{ steps.check.outputs.has_update }}
+      summary: ${{ steps.check.outputs.summary }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get current versions from Dockerfiles
-        id: current
-        run: |
-          # Get from linux/Dockerfile
-          RUST=$(grep -oP 'RUST_VERSION=\K[0-9.]+' linux/Dockerfile | head -1)
-          LLVM_MAJOR=$(grep -oP 'LLVM_VERSION=\K[0-9]+' linux/Dockerfile | head -1)
-          
-          # Get from windows/Dockerfile (full LLVM version)
-          LLVM=$(grep -oP 'LLVM_VERSION=\K[0-9.]+' windows/Dockerfile | head -1)
-          GIT=$(grep -oP 'GIT_VERSION=\K[0-9.]+' windows/Dockerfile | head -1)
-          ZIP=$(grep -oP '7ZIP_VERSION=\K[0-9]+' windows/Dockerfile | head -1)
-          
-          echo "rust=$RUST" >> $GITHUB_OUTPUT
-          echo "llvm=$LLVM" >> $GITHUB_OUTPUT
-          echo "llvm_major=$LLVM_MAJOR" >> $GITHUB_OUTPUT
-          echo "git=$GIT" >> $GITHUB_OUTPUT
-          echo "sevenzip=$ZIP" >> $GITHUB_OUTPUT
-          
-          echo "Current versions:"
-          echo "  Rust: $RUST"
-          echo "  LLVM: $LLVM (major: $LLVM_MAJOR)"
-          echo "  Git: $GIT"
-          echo "  7-Zip: $ZIP"
-
-      - name: Get latest versions
-        id: latest
+      - name: Check for updates
+        id: check
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          # Rust - from official manifest
-          if [ -n "${{ inputs.rust_version }}" ]; then
-            RUST="${{ inputs.rust_version }}"
-          else
-            RUST=$(curl -s https://static.rust-lang.org/dist/channel-rust-stable.toml | grep -oP 'cargo-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-          fi
-          echo "rust=$RUST" >> $GITHUB_OUTPUT
-          echo "Latest Rust: $RUST"
-          
-          # LLVM - from ghaith/llvm-package-windows releases
-          if [ -n "${{ inputs.llvm_version }}" ]; then
-            LLVM="${{ inputs.llvm_version }}"
-          else
-            LLVM=$(gh api repos/ghaith/llvm-package-windows/releases/latest --jq '.tag_name' | sed 's/^v//')
-          fi
-          LLVM_MAJOR=$(echo "$LLVM" | grep -oP '^\d+')
-          echo "llvm=$LLVM" >> $GITHUB_OUTPUT
-          echo "llvm_major=$LLVM_MAJOR" >> $GITHUB_OUTPUT
-          echo "Latest LLVM: $LLVM (major: $LLVM_MAJOR)"
-          
-          # Git for Windows - from GitHub releases
-          if [ -n "${{ inputs.git_version }}" ]; then
-            GIT="${{ inputs.git_version }}"
-          else
-            GIT=$(gh api repos/git-for-windows/git/releases/latest --jq '.tag_name' | grep -oP '[0-9]+\.[0-9]+\.[0-9]+')
-          fi
-          echo "git=$GIT" >> $GITHUB_OUTPUT
-          echo "Latest Git: $GIT"
-          
-          # 7-Zip - scrape from download page (version code like 2600 for 26.00)
-          if [ -n "${{ inputs.sevenzip_version }}" ]; then
-            ZIP="${{ inputs.sevenzip_version }}"
-          else
-            ZIP=$(curl -s https://www.7-zip.org/download.html | grep -oP '7z\K[0-9]{4}(?=-x64\.exe)' | head -1)
-          fi
-          echo "sevenzip=$ZIP" >> $GITHUB_OUTPUT
-          echo "Latest 7-Zip: $ZIP"
-
-      - name: Compare versions
-        id: compare
-        run: |
-          UPDATES=""
-          HAS_UPDATE=false
-          
-          # Only Rust and LLVM updates trigger a rebuild
-          if [ "${{ steps.current.outputs.rust }}" != "${{ steps.latest.outputs.rust }}" ]; then
-            UPDATES="${UPDATES}- Rust: ${{ steps.current.outputs.rust }} → ${{ steps.latest.outputs.rust }}\n"
-            HAS_UPDATE=true
-          fi
-          
-          if [ "${{ steps.current.outputs.llvm }}" != "${{ steps.latest.outputs.llvm }}" ]; then
-            UPDATES="${UPDATES}- LLVM: ${{ steps.current.outputs.llvm }} → ${{ steps.latest.outputs.llvm }}\n"
-            HAS_UPDATE=true
-          fi
-          
-          # Git and 7-Zip are updated opportunistically (only if we're already rebuilding)
-          if [ "$HAS_UPDATE" = true ]; then
-            if [ "${{ steps.current.outputs.git }}" != "${{ steps.latest.outputs.git }}" ]; then
-              UPDATES="${UPDATES}- Git: ${{ steps.current.outputs.git }} → ${{ steps.latest.outputs.git }}\n"
-            fi
-            
-            if [ "${{ steps.current.outputs.sevenzip }}" != "${{ steps.latest.outputs.sevenzip }}" ]; then
-              UPDATES="${UPDATES}- 7-Zip: ${{ steps.current.outputs.sevenzip }} → ${{ steps.latest.outputs.sevenzip }}\n"
-            fi
-          fi
-          
-          if [ "$HAS_UPDATE" = true ]; then
-            echo "has_update=true" >> $GITHUB_OUTPUT
-            echo -e "Updates available:\n$UPDATES"
-          else
-            echo "has_update=false" >> $GITHUB_OUTPUT
-            echo "All versions are up to date"
-          fi
-          
-          # Store summary for PR body (escape newlines for GitHub Actions)
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$UPDATES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          RUST_OVERRIDE: ${{ inputs.rust_version }}
+          LLVM_OVERRIDE: ${{ inputs.llvm_version }}
+          GIT_OVERRIDE: ${{ inputs.git_version }}
+          SEVENZIP_OVERRIDE: ${{ inputs.sevenzip_version }}
+        run: ./scripts/check-versions.sh
 
   create-pr:
     needs: check-updates
@@ -160,64 +62,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Update versions in Dockerfiles
-        run: |
-          echo "Applying version updates..."
-          
-          # Update Rust in both Dockerfiles
-          if [ "${{ needs.check-updates.outputs.rust_current }}" != "${{ needs.check-updates.outputs.rust_latest }}" ]; then
-            sed -i "s/RUST_VERSION=${{ needs.check-updates.outputs.rust_current }}/RUST_VERSION=${{ needs.check-updates.outputs.rust_latest }}/" linux/Dockerfile windows/Dockerfile
-            echo "Updated Rust to ${{ needs.check-updates.outputs.rust_latest }}"
-          fi
-          
-          # Update LLVM in windows/Dockerfile (full version)
-          if [ "${{ needs.check-updates.outputs.llvm_current }}" != "${{ needs.check-updates.outputs.llvm_latest }}" ]; then
-            sed -i "s/LLVM_VERSION=${{ needs.check-updates.outputs.llvm_current }}/LLVM_VERSION=${{ needs.check-updates.outputs.llvm_latest }}/" windows/Dockerfile
-            # Update major version in linux/Dockerfile
-            OLD_MAJOR=$(echo "${{ needs.check-updates.outputs.llvm_current }}" | grep -oP '^\d+')
-            NEW_MAJOR="${{ needs.check-updates.outputs.llvm_major }}"
-            if [ "$OLD_MAJOR" != "$NEW_MAJOR" ]; then
-              sed -i "s/LLVM_VERSION=$OLD_MAJOR/LLVM_VERSION=$NEW_MAJOR/" linux/Dockerfile
-              echo "Updated Linux LLVM major to $NEW_MAJOR"
-            fi
-            echo "Updated Windows LLVM to ${{ needs.check-updates.outputs.llvm_latest }}"
-          fi
-          
-          # Update Git in windows/Dockerfile
-          if [ "${{ needs.check-updates.outputs.git_current }}" != "${{ needs.check-updates.outputs.git_latest }}" ]; then
-            sed -i "s/GIT_VERSION=${{ needs.check-updates.outputs.git_current }}/GIT_VERSION=${{ needs.check-updates.outputs.git_latest }}/" windows/Dockerfile
-            echo "Updated Git to ${{ needs.check-updates.outputs.git_latest }}"
-          fi
-          
-          # Update 7-Zip in windows/Dockerfile
-          if [ "${{ needs.check-updates.outputs.sevenzip_current }}" != "${{ needs.check-updates.outputs.sevenzip_latest }}" ]; then
-            sed -i "s/7ZIP_VERSION=${{ needs.check-updates.outputs.sevenzip_current }}/7ZIP_VERSION=${{ needs.check-updates.outputs.sevenzip_latest }}/" windows/Dockerfile
-            echo "Updated 7-Zip to ${{ needs.check-updates.outputs.sevenzip_latest }}"
-          fi
-          
-          echo ""
-          echo "Updated Dockerfiles:"
-          grep -E '(RUST_VERSION|LLVM_VERSION|GIT_VERSION|7ZIP_VERSION)=' linux/Dockerfile windows/Dockerfile
+      - name: Update Dockerfiles
+        env:
+          RUST_CURRENT: ${{ needs.check-updates.outputs.rust_current }}
+          RUST_LATEST: ${{ needs.check-updates.outputs.rust_latest }}
+          LLVM_CURRENT: ${{ needs.check-updates.outputs.llvm_current }}
+          LLVM_LATEST: ${{ needs.check-updates.outputs.llvm_latest }}
+          LLVM_MAJOR: ${{ needs.check-updates.outputs.llvm_major }}
+          GIT_CURRENT: ${{ needs.check-updates.outputs.git_current }}
+          GIT_LATEST: ${{ needs.check-updates.outputs.git_latest }}
+          SEVENZIP_CURRENT: ${{ needs.check-updates.outputs.sevenzip_current }}
+          SEVENZIP_LATEST: ${{ needs.check-updates.outputs.sevenzip_latest }}
+        run: ./scripts/update-versions.sh
 
       - name: Validate URLs
         run: ./scripts/validate-urls.sh
-
-      - name: Generate branch name and tag
-        id: meta
-        run: |
-          # Branch name based on what's being updated
-          BRANCH="update-deps"
-          
-          # Tag is based on LLVM major and Rust major.minor
-          LLVM_MAJOR="${{ needs.check-updates.outputs.llvm_major }}"
-          RUST="${{ needs.check-updates.outputs.rust_latest }}"
-          RUST_MAJOR_MINOR=$(echo "$RUST" | grep -oP '^\d+\.\d+')
-          
-          TAG="v${LLVM_MAJOR}-${RUST_MAJOR_MINOR}"
-          
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Branch: $BRANCH, Tag: $TAG"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -228,7 +87,7 @@ jobs:
           body: |
             This PR updates the following dependencies:
             
-            ${{ needs.check-updates.outputs.update_summary }}
+            ${{ needs.check-updates.outputs.summary }}
             
             ## Updated versions
             | Component | Version |
@@ -240,11 +99,11 @@ jobs:
             | 7-Zip | ${{ needs.check-updates.outputs.sevenzip_latest }} |
             
             ## Release
-            When merged, this will be tagged as `${{ steps.meta.outputs.tag }}`.
+            When merged, this will be tagged as `v${{ needs.check-updates.outputs.llvm_major }}-${{ needs.check-updates.outputs.rust_latest }}`.
             
             ---
             *This PR was automatically created by the update-versions workflow.*
-          branch: ${{ steps.meta.outputs.branch }}
+          branch: update-deps
           delete-branch: true
           labels: |
             dependencies
