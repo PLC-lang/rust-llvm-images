@@ -18,7 +18,7 @@ on:
         description: 'Git for Windows version (leave empty to auto-detect)'
         required: false
         type: string
-      7zip_version:
+      sevenzip_version:
         description: '7-Zip version code e.g. 2600 (leave empty to auto-detect)'
         required: false
         type: string
@@ -38,8 +38,8 @@ jobs:
       llvm_major: ${{ steps.latest.outputs.llvm_major }}
       git_current: ${{ steps.current.outputs.git }}
       git_latest: ${{ steps.latest.outputs.git }}
-      7zip_current: ${{ steps.current.outputs.7zip }}
-      7zip_latest: ${{ steps.latest.outputs.7zip }}
+      sevenzip_current: ${{ steps.current.outputs.sevenzip }}
+      sevenzip_latest: ${{ steps.latest.outputs.sevenzip }}
       has_update: ${{ steps.compare.outputs.has_update }}
       update_summary: ${{ steps.compare.outputs.summary }}
     steps:
@@ -61,7 +61,7 @@ jobs:
           echo "llvm=$LLVM" >> $GITHUB_OUTPUT
           echo "llvm_major=$LLVM_MAJOR" >> $GITHUB_OUTPUT
           echo "git=$GIT" >> $GITHUB_OUTPUT
-          echo "7zip=$ZIP" >> $GITHUB_OUTPUT
+          echo "sevenzip=$ZIP" >> $GITHUB_OUTPUT
           
           echo "Current versions:"
           echo "  Rust: $RUST"
@@ -104,12 +104,12 @@ jobs:
           echo "Latest Git: $GIT"
           
           # 7-Zip - scrape from download page (version code like 2600 for 26.00)
-          if [ -n "${{ inputs.7zip_version }}" ]; then
-            ZIP="${{ inputs.7zip_version }}"
+          if [ -n "${{ inputs.sevenzip_version }}" ]; then
+            ZIP="${{ inputs.sevenzip_version }}"
           else
             ZIP=$(curl -s https://www.7-zip.org/download.html | grep -oP '7z\K[0-9]{4}(?=-x64\.exe)' | head -1)
           fi
-          echo "7zip=$ZIP" >> $GITHUB_OUTPUT
+          echo "sevenzip=$ZIP" >> $GITHUB_OUTPUT
           echo "Latest 7-Zip: $ZIP"
 
       - name: Compare versions
@@ -133,8 +133,8 @@ jobs:
             HAS_UPDATE=true
           fi
           
-          if [ "${{ steps.current.outputs.7zip }}" != "${{ steps.latest.outputs.7zip }}" ]; then
-            UPDATES="${UPDATES}- 7-Zip: ${{ steps.current.outputs.7zip }} → ${{ steps.latest.outputs.7zip }}\n"
+          if [ "${{ steps.current.outputs.sevenzip }}" != "${{ steps.latest.outputs.sevenzip }}" ]; then
+            UPDATES="${UPDATES}- 7-Zip: ${{ steps.current.outputs.sevenzip }} → ${{ steps.latest.outputs.sevenzip }}\n"
             HAS_UPDATE=true
           fi
           
@@ -188,9 +188,9 @@ jobs:
           fi
           
           # Update 7-Zip in windows/Dockerfile
-          if [ "${{ needs.check-updates.outputs.7zip_current }}" != "${{ needs.check-updates.outputs.7zip_latest }}" ]; then
-            sed -i "s/7ZIP_VERSION=${{ needs.check-updates.outputs.7zip_current }}/7ZIP_VERSION=${{ needs.check-updates.outputs.7zip_latest }}/" windows/Dockerfile
-            echo "Updated 7-Zip to ${{ needs.check-updates.outputs.7zip_latest }}"
+          if [ "${{ needs.check-updates.outputs.sevenzip_current }}" != "${{ needs.check-updates.outputs.sevenzip_latest }}" ]; then
+            sed -i "s/7ZIP_VERSION=${{ needs.check-updates.outputs.sevenzip_current }}/7ZIP_VERSION=${{ needs.check-updates.outputs.sevenzip_latest }}/" windows/Dockerfile
+            echo "Updated 7-Zip to ${{ needs.check-updates.outputs.sevenzip_latest }}"
           fi
           
           echo ""
@@ -232,7 +232,7 @@ jobs:
             | LLVM (Windows) | ${{ needs.check-updates.outputs.llvm_latest }} |
             | LLVM (Linux) | ${{ needs.check-updates.outputs.llvm_major }} |
             | Git for Windows | ${{ needs.check-updates.outputs.git_latest }} |
-            | 7-Zip | ${{ needs.check-updates.outputs.7zip_latest }} |
+            | 7-Zip | ${{ needs.check-updates.outputs.sevenzip_latest }} |
             
             ## Release
             When merged, this will be tagged as `${{ steps.meta.outputs.tag }}`.
