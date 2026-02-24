@@ -4,9 +4,9 @@ ARG BASE_IMAGE=mcr.microsoft.com/windows/servercore:$WINDOWS_VERSION
 
 FROM $BASE_IMAGE
 
-ARG LLVM_VER=21.1.7
-ARG RUST_VER=1.93.1
-ARG ZIP_VERSION=2600
+ARG LLVM_VERSION=21.1.7
+ARG RUST_VERSION=1.93.1
+ARG 7ZIP_VERSION=2600
 ARG GIT_VERSION=2.53.0
 
 WORKDIR C:/buildtools
@@ -32,7 +32,7 @@ RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache `
 SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "cmd", "/S", "/C"]
 
 ADD https://win.rustup.rs C:/TEMP/rustup-init.exe
-RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VER% -y `
+RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VERSION% -y `
     && del /q C:\TEMP\rustup-init.exe
 
 # Set PATH for Rust - VsDevCmd.bat already sets up MSVC paths
@@ -47,7 +47,7 @@ RUN rustup component add llvm-tools-preview
 # STAGE 3: Install additional tools (7zip, git, LLVM)
 # These are slower downloads/extractions but don't affect build validation
 # ==============================================================================
-ADD https://www.7-zip.org/a/7z${ZIP_VERSION}-x64.exe C:/TEMP/7zsetup.exe
+ADD https://www.7-zip.org/a/7z${7ZIP_VERSION}-x64.exe C:/TEMP/7zsetup.exe
 RUN C:/TEMP/7zsetup.exe /S /D=C:\buildtools\7z `
     && del /q C:\TEMP\7zsetup.exe
 
@@ -57,7 +57,7 @@ ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.win
 RUN C:\buildtools\7z\7z.exe x C:/TEMP/git-install.exe -ogit `
     && del /q C:\TEMP\git-install.exe
 
-ADD https://github.com/ghaith/llvm-package-windows/releases/download/v${LLVM_VER}/LLVM-${LLVM_VER}-win64.7z C:/TEMP/llvm.7z
+ADD https://github.com/ghaith/llvm-package-windows/releases/download/v${LLVM_VERSION}/LLVM-${LLVM_VERSION}-win64.7z C:/TEMP/llvm.7z
 RUN C:\buildtools\7z\7z.exe x C:/TEMP/llvm.7z -ollvm `
     && del /q C:\TEMP\llvm.7z
 
