@@ -197,6 +197,9 @@ jobs:
           echo "Updated Dockerfiles:"
           grep -E '(RUST_VERSION|LLVM_VERSION|GIT_VERSION|7ZIP_VERSION)=' linux/Dockerfile windows/Dockerfile
 
+      - name: Validate URLs
+        run: ./scripts/validate-urls.sh
+
       - name: Generate branch name and tag
         id: meta
         run: |
