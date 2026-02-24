@@ -73,7 +73,7 @@ jobs:
       - name: Build image
         working-directory: windows
         shell: bash
-        run: docker build . --tag $IMAGE_NAME
+        run: docker buildx build . --tag $IMAGE_NAME
 
   publish-devcontainer:
     if: ${{ github.ref == 'refs/heads/main' }}
