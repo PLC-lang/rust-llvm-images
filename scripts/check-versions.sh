@@ -16,7 +16,7 @@ get_current_versions() {
     LLVM_CURRENT=$(grep -oP 'LLVM_VERSION=\K[0-9.]+' "$ROOT_DIR/windows/Dockerfile" | head -1)
     LLVM_MAJOR_CURRENT=$(grep -oP 'LLVM_VERSION=\K[0-9]+' "$ROOT_DIR/linux/Dockerfile" | head -1)
     GIT_CURRENT=$(grep -oP 'GIT_VERSION=\K[0-9.]+' "$ROOT_DIR/windows/Dockerfile" | head -1)
-    SEVENZIP_CURRENT=$(grep -oP '7ZIP_VERSION=\K[0-9]+' "$ROOT_DIR/windows/Dockerfile" | head -1)
+    SEVENZIP_CURRENT=$(grep -oP 'SEVENZIP_VERSION=\K[0-9]+' "$ROOT_DIR/windows/Dockerfile" | head -1)
 }
 
 # Get latest versions from upstream

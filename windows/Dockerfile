@@ -6,7 +6,7 @@ FROM $BASE_IMAGE
 
 ARG LLVM_VERSION=21.1.7
 ARG RUST_VERSION=1.93.1
-ARG 7ZIP_VERSION=2600
+ARG SEVENZIP_VERSION=2600
 ARG GIT_VERSION=2.53.0
 
 WORKDIR C:/buildtools
@@ -57,7 +57,7 @@ RUN rustup component add llvm-tools-preview
 # STAGE 3: Install additional tools (7zip, git, LLVM)
 # These are slower downloads/extractions but don't affect build validation
 # ==============================================================================
-ADD https://www.7-zip.org/a/7z${7ZIP_VERSION}-x64.exe C:/TEMP/7zsetup.exe
+ADD https://www.7-zip.org/a/7z${SEVENZIP_VERSION}-x64.exe C:/TEMP/7zsetup.exe
 RUN C:/TEMP/7zsetup.exe /S /D=C:\buildtools\7z `
     && del /q C:\TEMP\7zsetup.exe
 

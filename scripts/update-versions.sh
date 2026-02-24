@@ -46,11 +46,11 @@ fi
 
 # Update 7-Zip in windows/Dockerfile
 if [ "$SEVENZIP_CURRENT" != "$SEVENZIP_LATEST" ]; then
-    sed -i "s/7ZIP_VERSION=$SEVENZIP_CURRENT/7ZIP_VERSION=$SEVENZIP_LATEST/" "$ROOT_DIR/windows/Dockerfile"
+    sed -i "s/SEVENZIP_VERSION=$SEVENZIP_CURRENT/SEVENZIP_VERSION=$SEVENZIP_LATEST/" "$ROOT_DIR/windows/Dockerfile"
     echo "Updated 7-Zip: $SEVENZIP_CURRENT → $SEVENZIP_LATEST"
 fi
 
 echo ""
 echo "Updated Dockerfiles:"
-grep -E '(RUST_VERSION|LLVM_VERSION|GIT_VERSION|7ZIP_VERSION)=' \
+grep -E '(RUST_VERSION|LLVM_VERSION|GIT_VERSION|SEVENZIP_VERSION)=' \
     "$ROOT_DIR/linux/Dockerfile" "$ROOT_DIR/windows/Dockerfile"
