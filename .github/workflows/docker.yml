@@ -82,10 +82,11 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: windows/Dockerfile
+          # DL3006: Always tag image - we use ARG for version, hadolint doesn't understand this
           # DL3020: Use COPY instead of ADD - we use ADD for URLs which is valid
           # DL3059: Multiple consecutive RUN - acceptable for clarity in Windows Dockerfiles
           # SC1001: Escape sequences - Windows uses backtick, not backslash
-          ignore: DL3020,DL3059,SC1001
+          ignore: DL3006,DL3020,DL3059,SC1001
 
   build-windows:
     name: Build Windows image
