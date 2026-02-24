@@ -1,4 +1,4 @@
-ARG DEBIAN_VERSION=bookworm
+ARG DEBIAN_VERSION=trixie
 ARG BASE_IMAGE=debian:$DEBIAN_VERSION
 
 FROM $BASE_IMAGE
@@ -8,20 +8,19 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG LLVM_VERSION=21
-ARG RUST_VERSION=1.90
+ARG RUST_VERSION=1.93.1
 
 # Install LLVM and its dependencies
-RUN apt update \
-    && apt upgrade -y \
-    && apt install -y --no-install-recommends wget curl gnupg build-essential lsb-release software-properties-common \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends wget curl gnupg build-essential lsb-release ca-certificates \
     && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh $LLVM_VERSION \
-    && apt install -y --no-install-recommends clang lld liblld-$LLVM_VERSION-dev libpolly-$LLVM_VERSION-dev
-
-# TODO: Remove this once we completely switched over to LLVM 21
-RUN apt install -y zip clang lldb lld clangd clang-14 lldb-14 lld-14 clangd-14 liblld-14-dev llvm-14-dev libpolly-14-dev
+    && apt-get install -y --no-install-recommends clang lld liblld-$LLVM_VERSION-dev libpolly-$LLVM_VERSION-dev
 
 # Install llvm-lit, used by our correctness tests
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /uvx /bin/
+# Use a non root directory for uv
+ENV UV_TOOL_DIR="/usr/local/uv"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
 RUN uv tool install lit
 
@@ -35,8 +34,10 @@ ENV PATH="${CARGO_HOME}/bin:${PATH}"
 RUN rustup toolchain install $RUST_VERSION \
     && rustup default $RUST_VERSION \
     && rustup component add clippy rustfmt llvm-tools-preview \
+    && rustup target add x86_64-unknown-linux-gnu \
     && rustup target add aarch64-unknown-linux-gnu \
-    && rustup target add x86_64-unknown-linux-musl
+    && rustup target add x86_64-unknown-linux-musl \
+    && rustup target add aarch64-unknown-linux-musl
 
 RUN chmod -R a+rw $CARGO_HOME \
     && chmod -R a+rw $RUSTUP_HOME \
