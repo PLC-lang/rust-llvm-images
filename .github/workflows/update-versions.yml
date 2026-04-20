@@ -6,6 +6,11 @@ on:
     - cron: '0 9 * * 1'
   workflow_dispatch:
     inputs:
+      dry_run:
+        description: 'Check only; never create a PR'
+        required: false
+        type: boolean
+        default: true
       rust_version:
         description: 'Rust version (leave empty to auto-detect)'
         required: false
@@ -55,9 +60,54 @@ jobs:
           SEVENZIP_OVERRIDE: ${{ inputs.sevenzip_version }}
         run: ./scripts/check-versions.sh
 
+  report:
+    needs: check-updates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize result
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          HAS_UPDATE: ${{ needs.check-updates.outputs.has_update }}
+          SUMMARY: ${{ needs.check-updates.outputs.summary }}
+          RUST_CURRENT: ${{ needs.check-updates.outputs.rust_current }}
+          RUST_LATEST: ${{ needs.check-updates.outputs.rust_latest }}
+          LLVM_CURRENT: ${{ needs.check-updates.outputs.llvm_current }}
+          LLVM_LATEST: ${{ needs.check-updates.outputs.llvm_latest }}
+          GIT_CURRENT: ${{ needs.check-updates.outputs.git_current }}
+          GIT_LATEST: ${{ needs.check-updates.outputs.git_latest }}
+          SEVENZIP_CURRENT: ${{ needs.check-updates.outputs.sevenzip_current }}
+          SEVENZIP_LATEST: ${{ needs.check-updates.outputs.sevenzip_latest }}
+        run: |
+          {
+            echo "## Update check result"
+            echo ""
+            echo "| Component | Current | Latest |"
+            echo "|---|---|---|"
+            echo "| Rust | $RUST_CURRENT | $RUST_LATEST |"
+            echo "| LLVM (Windows) | $LLVM_CURRENT | $LLVM_LATEST |"
+            echo "| Git for Windows | $GIT_CURRENT | $GIT_LATEST |"
+            echo "| 7-Zip | $SEVENZIP_CURRENT | $SEVENZIP_LATEST |"
+            echo ""
+
+            if [ "$HAS_UPDATE" = "true" ]; then
+              echo "### Pending updates"
+              printf '%b\n' "$SUMMARY"
+              echo ""
+
+              if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN" = "true" ]; then
+                echo "Dry run enabled: no PR will be created."
+              else
+                echo "Update available: PR creation is enabled."
+              fi
+            else
+              echo "No Rust/LLVM updates detected. No PR will be created."
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
   create-pr:
     needs: check-updates
-    if: needs.check-updates.outputs.has_update == 'true'
+    if: needs.check-updates.outputs.has_update == 'true' && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
