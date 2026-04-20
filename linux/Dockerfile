@@ -47,8 +47,8 @@ RUN chmod -R a+rw $CARGO_HOME \
 RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-$(uname -m)-unknown-linux-musl.tgz \
     && tar -xf cargo-binstall-$(uname -m)-unknown-linux-musl.tgz -C $CARGO_HOME/bin \
     && rm cargo-binstall-*.tgz
-#Install documentation and coverage tools
-RUN cargo binstall --no-confirm mdbook grcov cargo-nextest cargo-deb
+# Install documentation, coverage, and release tooling
+RUN cargo binstall --no-confirm mdbook grcov cargo-nextest cargo-deb cargo-edit git-cliff
 
 # Configure container defaults for interactive use
 WORKDIR /build
