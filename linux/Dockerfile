@@ -8,7 +8,7 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG LLVM_VERSION=21
-ARG RUST_VERSION=1.93.1
+ARG RUST_VERSION=1.95.0
 
 # Install LLVM and its dependencies
 RUN apt-get update \
@@ -18,7 +18,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends clang lld liblld-$LLVM_VERSION-dev libpolly-$LLVM_VERSION-dev
 
 # Install llvm-lit, used by our correctness tests
-COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
 # Use a non root directory for uv
 ENV UV_TOOL_DIR="/usr/local/uv"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
