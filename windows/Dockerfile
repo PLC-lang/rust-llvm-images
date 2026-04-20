@@ -49,7 +49,7 @@ RUN powershell -Command "Expand-Archive -Path C:\TEMP\binstall.zip -DestinationP
 # Install tools via binstall (pre-built binaries, no compilation)
 # Falls back to cargo install if no binary available
 RUN cargo binstall --no-confirm cargo-nextest grcov mdbook `
-    && rmdir /s /q %USERPROFILE%\.cargo\registry 2>nul || echo "No registry to clean"
+    && (rmdir /s /q %USERPROFILE%\.cargo\registry 2>nul || echo "No registry to clean")
 
 RUN rustup component add llvm-tools-preview
 

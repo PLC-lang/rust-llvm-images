@@ -78,6 +78,20 @@ jobs:
       - name: Validate URLs
         run: ./scripts/validate-urls.sh
 
+      - name: Compute release tag
+        id: tag
+        env:
+          LLVM_MAJOR: ${{ needs.check-updates.outputs.llvm_major }}
+          RUST_VERSION: ${{ needs.check-updates.outputs.rust_latest }}
+        run: |
+          set -euo pipefail
+          IFS='.' read -r RUST_MAJOR RUST_MINOR RUST_PATCH <<< "$RUST_VERSION"
+          RUST_TAG="${RUST_MAJOR}.${RUST_MINOR}"
+          if [ -n "${RUST_PATCH:-}" ] && [ "$RUST_PATCH" != "0" ]; then
+            RUST_TAG="${RUST_TAG}-${RUST_PATCH}"
+          fi
+          echo "release_tag=v${LLVM_MAJOR}-${RUST_TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
@@ -99,7 +113,7 @@ jobs:
             | 7-Zip | ${{ needs.check-updates.outputs.sevenzip_latest }} |
             
             ## Release
-            When merged, this will be tagged as `v${{ needs.check-updates.outputs.llvm_major }}-${{ needs.check-updates.outputs.rust_latest }}`.
+            When merged, this will be tagged as `${{ steps.tag.outputs.release_tag }}`.
             
             ---
             *This PR was automatically created by the update-versions workflow.*

@@ -11,7 +11,7 @@ permissions:
 jobs:
   release:
     # Only run if PR was merged and was an automated version update
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'update-rust-')
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'update-deps'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,13 +19,17 @@ jobs:
       - name: Extract versions for tag
         id: version
         run: |
+          set -euo pipefail
           RUST=$(grep -oP 'RUST_VERSION=\K[0-9.]+' linux/Dockerfile | head -1)
           LLVM=$(grep -oP 'LLVM_VERSION=\K[0-9]+' linux/Dockerfile | head -1)
-          
-          # Extract major.minor from rust version (e.g., 1.93.1 -> 1.93)
-          RUST_MAJOR_MINOR=$(echo "$RUST" | grep -oP '^\d+\.\d+')
-          
-          TAG="v${LLVM}-${RUST_MAJOR_MINOR}"
+
+          IFS='.' read -r RUST_MAJOR RUST_MINOR RUST_PATCH <<< "$RUST"
+          RUST_TAG="${RUST_MAJOR}.${RUST_MINOR}"
+          if [ -n "${RUST_PATCH:-}" ] && [ "$RUST_PATCH" != "0" ]; then
+            RUST_TAG="${RUST_TAG}-${RUST_PATCH}"
+          fi
+
+          TAG="v${LLVM}-${RUST_TAG}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "rust=$RUST" >> $GITHUB_OUTPUT
           echo "llvm=$LLVM" >> $GITHUB_OUTPUT
