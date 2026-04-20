@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Only run if PR was merged and was an automated version update
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'update-deps'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract versions for tag
+        id: version
+        run: |
+          set -euo pipefail
+          RUST=$(grep -oP 'RUST_VERSION=\K[0-9.]+' linux/Dockerfile | head -1)
+          LLVM=$(grep -oP 'LLVM_VERSION=\K[0-9]+' linux/Dockerfile | head -1)
+
+          IFS='.' read -r RUST_MAJOR RUST_MINOR RUST_PATCH <<< "$RUST"
+          RUST_TAG="${RUST_MAJOR}.${RUST_MINOR}"
+          if [ -n "${RUST_PATCH:-}" ] && [ "$RUST_PATCH" != "0" ]; then
+            RUST_TAG="${RUST_TAG}-${RUST_PATCH}"
+          fi
+
+          TAG="v${LLVM}-${RUST_TAG}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "rust=$RUST" >> $GITHUB_OUTPUT
+          echo "llvm=$LLVM" >> $GITHUB_OUTPUT
+          echo "Creating tag: $TAG"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body: |
+            ## Versions
+            - **Rust**: ${{ steps.version.outputs.rust }}
+            - **LLVM**: ${{ steps.version.outputs.llvm }}
+          generate_release_notes: true

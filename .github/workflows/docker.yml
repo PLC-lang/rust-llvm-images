@@ -94,11 +94,38 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_windows }}
     steps:
       - uses: actions/checkout@v3
-      - name: Build image
+      - name: Build image (with retry for hcsshim transient failures)
         working-directory: windows
         env:
           DOCKER_BUILDKIT: 0
-        run: docker build . --tag ${{ env.IMAGE_NAME }}
+        run: |
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
+          
+          while (-not $success -and $retryCount -lt $maxRetries) {
+            $retryCount++
+            Write-Host "Build attempt $retryCount of $maxRetries"
+            
+            docker build . --tag ${{ env.IMAGE_NAME }}
+            
+            if ($LASTEXITCODE -eq 0) {
+              $success = $true
+              Write-Host "Build succeeded on attempt $retryCount"
+            } else {
+              Write-Host "Build failed on attempt $retryCount"
+              if ($retryCount -lt $maxRetries) {
+                Write-Host "Retrying in 30 seconds..."
+                Start-Sleep -Seconds 30
+              }
+            }
+          }
+          
+          if (-not $success) {
+            Write-Host "Build failed after $maxRetries attempts"
+            exit 1
+          }
+        shell: pwsh
 
   publish-devcontainer:
     if: ${{ github.ref == 'refs/heads/main' }}

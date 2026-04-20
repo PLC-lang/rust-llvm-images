@@ -1,0 +1,174 @@
+name: Update Versions
+
+on:
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Check only; never create a PR'
+        required: false
+        type: boolean
+        default: true
+      rust_version:
+        description: 'Rust version (leave empty to auto-detect)'
+        required: false
+        type: string
+      llvm_version:
+        description: 'LLVM version for Windows (leave empty to auto-detect)'
+        required: false
+        type: string
+      git_version:
+        description: 'Git for Windows version (leave empty to auto-detect)'
+        required: false
+        type: string
+      sevenzip_version:
+        description: '7-Zip version code e.g. 2600 (leave empty to auto-detect)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    outputs:
+      rust_current: ${{ steps.check.outputs.rust_current }}
+      rust_latest: ${{ steps.check.outputs.rust_latest }}
+      llvm_current: ${{ steps.check.outputs.llvm_current }}
+      llvm_latest: ${{ steps.check.outputs.llvm_latest }}
+      llvm_major: ${{ steps.check.outputs.llvm_major }}
+      git_current: ${{ steps.check.outputs.git_current }}
+      git_latest: ${{ steps.check.outputs.git_latest }}
+      sevenzip_current: ${{ steps.check.outputs.sevenzip_current }}
+      sevenzip_latest: ${{ steps.check.outputs.sevenzip_latest }}
+      has_update: ${{ steps.check.outputs.has_update }}
+      summary: ${{ steps.check.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for updates
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUST_OVERRIDE: ${{ inputs.rust_version }}
+          LLVM_OVERRIDE: ${{ inputs.llvm_version }}
+          GIT_OVERRIDE: ${{ inputs.git_version }}
+          SEVENZIP_OVERRIDE: ${{ inputs.sevenzip_version }}
+        run: ./scripts/check-versions.sh
+
+  report:
+    needs: check-updates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize result
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          HAS_UPDATE: ${{ needs.check-updates.outputs.has_update }}
+          SUMMARY: ${{ needs.check-updates.outputs.summary }}
+          RUST_CURRENT: ${{ needs.check-updates.outputs.rust_current }}
+          RUST_LATEST: ${{ needs.check-updates.outputs.rust_latest }}
+          LLVM_CURRENT: ${{ needs.check-updates.outputs.llvm_current }}
+          LLVM_LATEST: ${{ needs.check-updates.outputs.llvm_latest }}
+          GIT_CURRENT: ${{ needs.check-updates.outputs.git_current }}
+          GIT_LATEST: ${{ needs.check-updates.outputs.git_latest }}
+          SEVENZIP_CURRENT: ${{ needs.check-updates.outputs.sevenzip_current }}
+          SEVENZIP_LATEST: ${{ needs.check-updates.outputs.sevenzip_latest }}
+        run: |
+          {
+            echo "## Update check result"
+            echo ""
+            echo "| Component | Current | Latest |"
+            echo "|---|---|---|"
+            echo "| Rust | $RUST_CURRENT | $RUST_LATEST |"
+            echo "| LLVM (Windows) | $LLVM_CURRENT | $LLVM_LATEST |"
+            echo "| Git for Windows | $GIT_CURRENT | $GIT_LATEST |"
+            echo "| 7-Zip | $SEVENZIP_CURRENT | $SEVENZIP_LATEST |"
+            echo ""
+
+            if [ "$HAS_UPDATE" = "true" ]; then
+              echo "### Pending updates"
+              printf '%b\n' "$SUMMARY"
+              echo ""
+
+              if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN" = "true" ]; then
+                echo "Dry run enabled: no PR will be created."
+              else
+                echo "Update available: PR creation is enabled."
+              fi
+            else
+              echo "No Rust/LLVM updates detected. No PR will be created."
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  create-pr:
+    needs: check-updates
+    if: needs.check-updates.outputs.has_update == 'true' && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Dockerfiles
+        env:
+          RUST_CURRENT: ${{ needs.check-updates.outputs.rust_current }}
+          RUST_LATEST: ${{ needs.check-updates.outputs.rust_latest }}
+          LLVM_CURRENT: ${{ needs.check-updates.outputs.llvm_current }}
+          LLVM_LATEST: ${{ needs.check-updates.outputs.llvm_latest }}
+          LLVM_MAJOR: ${{ needs.check-updates.outputs.llvm_major }}
+          GIT_CURRENT: ${{ needs.check-updates.outputs.git_current }}
+          GIT_LATEST: ${{ needs.check-updates.outputs.git_latest }}
+          SEVENZIP_CURRENT: ${{ needs.check-updates.outputs.sevenzip_current }}
+          SEVENZIP_LATEST: ${{ needs.check-updates.outputs.sevenzip_latest }}
+        run: ./scripts/update-versions.sh
+
+      - name: Validate URLs
+        run: ./scripts/validate-urls.sh
+
+      - name: Compute release tag
+        id: tag
+        env:
+          LLVM_MAJOR: ${{ needs.check-updates.outputs.llvm_major }}
+          RUST_VERSION: ${{ needs.check-updates.outputs.rust_latest }}
+        run: |
+          set -euo pipefail
+          IFS='.' read -r RUST_MAJOR RUST_MINOR RUST_PATCH <<< "$RUST_VERSION"
+          RUST_TAG="${RUST_MAJOR}.${RUST_MINOR}"
+          if [ -n "${RUST_PATCH:-}" ] && [ "$RUST_PATCH" != "0" ]; then
+            RUST_TAG="${RUST_TAG}-${RUST_PATCH}"
+          fi
+          echo "release_tag=v${LLVM_MAJOR}-${RUST_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update dependencies"
+          title: "Update dependencies"
+          body: |
+            This PR updates the following dependencies:
+            
+            ${{ needs.check-updates.outputs.summary }}
+            
+            ## Updated versions
+            | Component | Version |
+            |-----------|---------|
+            | Rust | ${{ needs.check-updates.outputs.rust_latest }} |
+            | LLVM (Windows) | ${{ needs.check-updates.outputs.llvm_latest }} |
+            | LLVM (Linux) | ${{ needs.check-updates.outputs.llvm_major }} |
+            | Git for Windows | ${{ needs.check-updates.outputs.git_latest }} |
+            | 7-Zip | ${{ needs.check-updates.outputs.sevenzip_latest }} |
+            
+            ## Release
+            When merged, this will be tagged as `${{ steps.tag.outputs.release_tag }}`.
+            
+            ---
+            *This PR was automatically created by the update-versions workflow.*
+          branch: update-deps
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
