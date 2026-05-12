@@ -38,18 +38,7 @@ RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VERSION% -y `
 # Set PATH for Rust - VsDevCmd.bat already sets up MSVC paths
 RUN setx /M PATH "%PATH%;%USERPROFILE%\.cargo\bin"
 
-# Install cargo-binstall first, then use it to download pre-built binaries
-# This is faster and avoids hcsshim layer issues with large compile artifacts
-ADD https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-pc-windows-msvc.zip C:/TEMP/binstall.zip
-RUN powershell -Command "Expand-Archive -Path C:\TEMP\binstall.zip -DestinationPath C:\TEMP\binstall" `
-    && copy C:\TEMP\binstall\cargo-binstall.exe %USERPROFILE%\.cargo\bin\ `
-    && del /q C:\TEMP\binstall.zip `
-    && rmdir /s /q C:\TEMP\binstall
-
-# Install tools via binstall (pre-built binaries, no compilation)
-# Falls back to cargo install if no binary available
-RUN cargo binstall --no-confirm cargo-nextest grcov mdbook `
-    && (rmdir /s /q %USERPROFILE%\.cargo\registry 2>nul || echo "No registry to clean")
+RUN cargo install --locked cargo-nextest grcov mdbook
 
 RUN rustup component add llvm-tools-preview
 
