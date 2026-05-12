@@ -14,7 +14,18 @@ jobs:
     if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'update-deps'
     runs-on: ubuntu-latest
     steps:
+      # Mint a GitHub App token so the tag push fires docker.yml. The default
+      # GITHUB_TOKEN cannot trigger downstream workflows; App-minted tokens can.
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Extract versions for tag
         id: version
@@ -37,6 +48,8 @@ jobs:
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
