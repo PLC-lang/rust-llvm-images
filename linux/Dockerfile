@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.4
+
 ARG DEBIAN_VERSION=trixie
 ARG BASE_IMAGE=debian:$DEBIAN_VERSION
 
@@ -47,8 +49,15 @@ RUN chmod -R a+rw $CARGO_HOME \
 RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-$(uname -m)-unknown-linux-musl.tgz \
     && tar -xf cargo-binstall-$(uname -m)-unknown-linux-musl.tgz -C $CARGO_HOME/bin \
     && rm cargo-binstall-*.tgz
-# Install documentation, coverage, and release tooling
-RUN cargo binstall --no-confirm mdbook grcov cargo-nextest cargo-deb cargo-edit git-cliff
+# Install documentation, coverage, and release tooling.
+# cargo-binstall hits the GitHub API to resolve prebuilt artifacts. Without
+# auth it shares the 60/h unauthenticated rate limit per egress IP; on a
+# CI runner that gets exhausted and binstall silently falls back to
+# building from source, which fails for crates that require --locked
+# (e.g. cargo-nextest). Mount GITHUB_TOKEN so we get the 5000/h
+# authenticated limit and reliably pick prebuilts.
+RUN --mount=type=secret,id=gh_token,env=GITHUB_TOKEN \
+    cargo binstall --no-confirm mdbook grcov cargo-nextest cargo-deb cargo-edit git-cliff
 
 # Configure container defaults for interactive use
 WORKDIR /build
