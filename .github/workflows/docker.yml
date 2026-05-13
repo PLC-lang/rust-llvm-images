@@ -57,21 +57,30 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
-
-          # Change all uppercase to lowercase
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          # Strip "v" prefix from tag name
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "main" ] && VERSION=latest
-          #Add the platform to the version
-          VERSION=$VERSION-${{ matrix.config.arch }}
+          ARCH=${{ matrix.config.arch }}
+
+          # Determine which per-arch tags to publish:
+          #   - tag push   -> :<version>-<arch> AND :latest-<arch>  (releases own :latest)
+          #   - main push  -> :edge-<arch>                          (rolling main build)
+          REF=${{ github.ref }}
+          TAGS=()
+          if [[ "$REF" == "refs/tags/"* ]]; then
+            VERSION=$(echo "$REF" | sed -e 's,.*/\(.*\),\1,' -e 's/^v//')
+            TAGS+=("$VERSION-$ARCH" "latest-$ARCH")
+          elif [[ "$REF" == "refs/heads/main" ]]; then
+            TAGS+=("edge-$ARCH")
+          else
+            BRANCH=$(echo "$REF" | sed -e 's,.*/\(.*\),\1,')
+            TAGS+=("$BRANCH-$ARCH")
+          fi
+
           echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-          docker push $IMAGE_ID:$VERSION
+          for TAG in "${TAGS[@]}"; do
+            echo "Publishing $IMAGE_ID:$TAG"
+            docker tag $IMAGE_NAME $IMAGE_ID:$TAG
+            docker push $IMAGE_ID:$TAG
+          done
   validate-windows:
     name: Validate Windows Dockerfile
     runs-on: ubuntu-latest
@@ -158,14 +167,23 @@ jobs:
         shell: bash
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
-
-          # Change all uppercase to lowercase
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          # Strip "v" prefix from tag name
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "main" ] && VERSION=latest
-          docker manifest create $IMAGE_ID:$VERSION $IMAGE_ID:$VERSION-arm64 $IMAGE_ID:$VERSION-x86_64
-          docker manifest push $IMAGE_ID:$VERSION
+
+          # Mirror the per-arch tag list from build-linux:
+          #   - tag push   -> multi-arch :<version> AND :latest
+          #   - main push  -> multi-arch :edge
+          REF=${{ github.ref }}
+          VERSIONS=()
+          if [[ "$REF" == "refs/tags/"* ]]; then
+            VERSION=$(echo "$REF" | sed -e 's,.*/\(.*\),\1,' -e 's/^v//')
+            VERSIONS+=("$VERSION" "latest")
+          elif [[ "$REF" == "refs/heads/main" ]]; then
+            VERSIONS+=("edge")
+          else
+            VERSIONS+=("$(echo "$REF" | sed -e 's,.*/\(.*\),\1,')")
+          fi
+
+          for V in "${VERSIONS[@]}"; do
+            docker manifest create $IMAGE_ID:$V $IMAGE_ID:$V-arm64 $IMAGE_ID:$V-x86_64
+            docker manifest push $IMAGE_ID:$V
+          done
