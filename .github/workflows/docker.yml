@@ -45,7 +45,11 @@ jobs:
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
-        run: docker buildx build . --platform ${{matrix.config.version}}/${{matrix.config.arch}}  --file Dockerfile --tag $IMAGE_NAME
+        env:
+          # Authenticates cargo-binstall against the GitHub API inside the
+          # build (consumed via the gh_token BuildKit secret in Dockerfile).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: docker buildx build . --platform ${{matrix.config.version}}/${{matrix.config.arch}} --file Dockerfile --tag $IMAGE_NAME --secret id=gh_token,env=GITHUB_TOKEN
 
       - name: Log in to registry
         if: ${{ github.event_name != 'pull_request' }}
