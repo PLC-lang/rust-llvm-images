@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.4
+# syntax=docker/dockerfile:1
 
 ARG DEBIAN_VERSION=trixie
 ARG BASE_IMAGE=debian:$DEBIAN_VERSION
