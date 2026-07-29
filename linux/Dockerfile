@@ -14,7 +14,7 @@ ARG RUST_VERSION=1.95.0
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
-        wget curl gnupg build-essential lsb-release ca-certificates git jq \
+        wget curl gnupg build-essential lsb-release ca-certificates git jq zip\
     && wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
         | gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg \
     && CODENAME=$(lsb_release -cs) \
