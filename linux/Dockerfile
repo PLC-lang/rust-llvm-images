@@ -14,7 +14,7 @@ ARG RUST_VERSION=1.97.1
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
-        wget curl gnupg build-essential lsb-release ca-certificates git jq \
+        wget curl gnupg build-essential lsb-release ca-certificates git jq zip \
     && wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
         | gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg \
     && CODENAME=$(lsb_release -cs) \
@@ -23,6 +23,10 @@ RUN apt-get update \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         clang-${LLVM_VERSION} lld-${LLVM_VERSION} \
+        # llvm-<N>-dev used to arrive transitively via libpolly-<N>-dev; since
+        # LLVM 21.1.x polly is bundled into libLLVM and libpolly-<N>-dev has no
+        # dependencies anymore, so llvm-config-<N> must be requested explicitly
+        llvm-${LLVM_VERSION}-dev \
         liblld-${LLVM_VERSION}-dev libpolly-${LLVM_VERSION}-dev \
     && update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 100 \
     && update-alternatives --install /usr/bin/lld lld /usr/bin/lld-${LLVM_VERSION} 100
