@@ -23,7 +23,7 @@ RUN apt install -y zip clang lldb lld clangd clang-14 lldb-14 lld-14 clangd-14 l
 # Install llvm-lit, used by our correctness tests
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /uvx /bin/
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
-RUN uv tool install lit
+RUN uv tool install lit==18.1.8
 
 # Install Rust
 ENV CARGO_HOME=/usr/local/cargo
