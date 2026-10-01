@@ -31,12 +31,15 @@ RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache `
 # ==============================================================================
 SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "cmd", "/S", "/C"]
 
+ENV CARGO_HOME=C:\buildtools\cargo `
+    RUSTUP_HOME=C:\buildtools\rustup
+
 ADD https://win.rustup.rs C:/TEMP/rustup-init.exe
 RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VERSION% -y `
     && del /q C:\TEMP\rustup-init.exe
 
 # Set PATH for Rust - VsDevCmd.bat already sets up MSVC paths
-RUN setx /M PATH "%PATH%;%USERPROFILE%\.cargo\bin"
+RUN setx /M PATH "%PATH%;%CARGO_HOME%\bin"
 
 RUN cargo install --locked cargo-nextest grcov mdbook
 
@@ -55,6 +58,11 @@ RUN setx /M PATH "%PATH%;C:\buildtools\7z;C:\buildtools\llvm\bin;C:\buildtools\g
 ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.windows.1/PortableGit-${GIT_VERSION}-64-bit.7z.exe C:/TEMP/git-install.exe
 RUN C:\buildtools\7z\7z.exe x C:/TEMP/git-install.exe -ogit `
     && del /q C:\TEMP\git-install.exe
+
+# Allow paths beyond MAX_PATH: registry for long-path-aware tools (rustc, cargo),
+# core.longpaths for git and libgit2 (used by cargo for git dependencies)
+RUN reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f `
+    && C:\buildtools\git\bin\git.exe config --system core.longpaths true
 
 ADD https://github.com/ghaith/llvm-package-windows/releases/download/v${LLVM_VERSION}/LLVM-${LLVM_VERSION}-win64.7z C:/TEMP/llvm.7z
 RUN C:\buildtools\7z\7z.exe x C:/TEMP/llvm.7z -ollvm `
