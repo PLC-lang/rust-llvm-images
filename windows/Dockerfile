@@ -29,7 +29,8 @@ RUN C:/TEMP/vs_buildtools.exe --quiet --wait --norestart --nocache `
 # STAGE 2: Install Rust and tools (fail fast if MSVC toolchain broken)
 # This validates that VS + Windows SDK are correctly installed and can compile
 # ==============================================================================
-SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "cmd", "/S", "/C"]
+# VsDevCmd.bat defaults to an x86 environment (x86 link.exe and LIB); always request x64.
+SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "-arch=amd64", "-host_arch=amd64", "&&", "cmd", "/S", "/C"]
 
 ENV CARGO_HOME=C:\buildtools\cargo `
     RUSTUP_HOME=C:\buildtools\rustup
@@ -41,7 +42,10 @@ RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VERSION% -y `
 # Set PATH for Rust - VsDevCmd.bat already sets up MSVC paths
 RUN setx /M PATH "%PATH%;%CARGO_HOME%\bin"
 
-RUN cargo install --locked cargo-nextest grcov mdbook
+# Drop the crate sources in the same layer: some (e.g. nextest-runner snapshots) have
+# paths near MAX_PATH that make layer import fail on hosts without long path support.
+RUN cargo install --locked cargo-nextest grcov mdbook `
+    && rmdir /s /q \\?\%USERPROFILE%\.cargo\registry
 
 RUN rustup component add llvm-tools-preview
 
@@ -56,8 +60,9 @@ RUN C:/TEMP/7zsetup.exe /S /D=C:\buildtools\7z `
 RUN setx /M PATH "%PATH%;C:\buildtools\7z;C:\buildtools\llvm\bin;C:\buildtools\git\bin"
 
 ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.windows.1/PortableGit-${GIT_VERSION}-64-bit.7z.exe C:/TEMP/git-install.exe
+# Git's coreutils link.exe shadows MSVC link.exe in the bash entrypoint (usr/bin is first on PATH).
 RUN C:\buildtools\7z\7z.exe x C:/TEMP/git-install.exe -ogit `
-    && del /q C:\TEMP\git-install.exe
+    && del /q C:\TEMP\git-install.exe C:\buildtools\git\usr\bin\link.exe
 
 # Allow paths beyond MAX_PATH: registry for long-path-aware tools (rustc, cargo),
 # core.longpaths for git and libgit2 (used by cargo for git dependencies)
@@ -73,6 +78,6 @@ RUN C:\buildtools\7z\7z.exe x C:/TEMP/llvm.7z -ollvm `
 # ==============================================================================
 WORKDIR C:/build
 
-SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
+SHELL ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "-arch=amd64", "-host_arch=amd64", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
 
-ENTRYPOINT ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "&&", "C:\\buildtools\\git\\bin\\bash.exe", "-i", "-l"]
+ENTRYPOINT ["C:\\buildtools\\Common7\\Tools\\VsDevCmd.bat", "-arch=amd64", "-host_arch=amd64", "&&", "C:\\buildtools\\git\\bin\\bash.exe", "-i", "-l"]
