@@ -41,7 +41,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       - name: Build image
         working-directory: ${{ matrix.config.version }}
         shell: bash
@@ -85,7 +85,7 @@ jobs:
     name: Validate Windows Dockerfile
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
@@ -102,7 +102,7 @@ jobs:
     runs-on: windows-2022
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_windows }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       - name: Build image (with retry for hcsshim transient failures)
         working-directory: windows
         env:
@@ -140,7 +140,7 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: "Publish Templates"
         uses: devcontainers/action@v1
