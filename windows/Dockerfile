@@ -45,7 +45,7 @@ RUN setx /M PATH "%PATH%;%CARGO_HOME%\bin"
 # Drop the crate sources in the same layer: some (e.g. nextest-runner snapshots) have
 # paths near MAX_PATH that make layer import fail on hosts without long path support.
 RUN cargo install --locked cargo-nextest grcov mdbook `
-    && rmdir /s /q \\?\%USERPROFILE%\.cargo\registry
+    && rmdir /s /q \\?\%CARGO_HOME%\registry
 
 RUN rustup component add llvm-tools-preview
 
