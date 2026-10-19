@@ -15,6 +15,15 @@ RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         wget curl gnupg build-essential lsb-release ca-certificates git jq zip \
+    # Cross toolchain for the other supported arch, so `clang --target=<other>`
+    # finds crt files, libc/libm, libgcc and a matching `<triple>-ld`.
+    # libc6-dev-*-cross is only a Recommends of the cross gcc, so list it explicitly.
+    && case "$(dpkg --print-architecture)" in \
+        amd64) CROSS_PKGS="gcc-aarch64-linux-gnu libc6-dev-arm64-cross" ;; \
+        arm64) CROSS_PKGS="gcc-x86-64-linux-gnu libc6-dev-amd64-cross" ;; \
+        *) echo "unsupported architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
+       esac \
+    && apt-get install -y --no-install-recommends $CROSS_PKGS \
     && wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
         | gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg \
     && CODENAME=$(lsb_release -cs) \
