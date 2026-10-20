@@ -38,7 +38,9 @@ RUN apt-get update \
         llvm-${LLVM_VERSION}-dev \
         liblld-${LLVM_VERSION}-dev libpolly-${LLVM_VERSION}-dev \
     && update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 100 \
-    && update-alternatives --install /usr/bin/lld lld /usr/bin/lld-${LLVM_VERSION} 100
+    && update-alternatives --install /usr/bin/lld lld /usr/bin/lld-${LLVM_VERSION} 100 \
+    # `-fuse-ld=lld` and plc look up the unversioned `ld.lld`
+    && update-alternatives --install /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-${LLVM_VERSION} 100
 
 # Install llvm-lit, used by our correctness tests
 COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
