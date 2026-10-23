@@ -57,26 +57,28 @@ printf "tag tests passed\n"
 echo "== check-versions no update =="
 copy_repo
 out=$(mktemp)
-RUST_OVERRIDE=1.95.0 LLVM_OVERRIDE=21.1.7 GIT_OVERRIDE=2.53.0 SEVENZIP_OVERRIDE=2600 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-no-update.txt
+RUST_OVERRIDE=1.95.0 LLVM_OVERRIDE=21.1.7 GIT_OVERRIDE=2.53.0 SEVENZIP_OVERRIDE=2600 UV_OVERRIDE=0.11.7 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-no-update.txt
 grep -Fx "has_update=false" "$out"
 
 echo "== check-versions git/7zip only do not trigger =="
 copy_repo
 out=$(mktemp)
-RUST_OVERRIDE=1.95.0 LLVM_OVERRIDE=21.1.7 GIT_OVERRIDE=2.54.0 SEVENZIP_OVERRIDE=2700 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-tools-only.txt
+RUST_OVERRIDE=1.95.0 LLVM_OVERRIDE=21.1.7 GIT_OVERRIDE=2.54.0 SEVENZIP_OVERRIDE=2700 UV_OVERRIDE=0.11.8 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-tools-only.txt
 grep -Fx "has_update=false" "$out"
 ! grep -Fq -- "- Git:" "$out"
 ! grep -Fq -- "- 7-Zip:" "$out"
+! grep -Fq -- "- uv:" "$out"
 
 echo "== check-versions update available =="
 copy_repo
 out=$(mktemp)
-RUST_OVERRIDE=1.95.1 LLVM_OVERRIDE=21.1.8 GIT_OVERRIDE=2.54.0 SEVENZIP_OVERRIDE=2700 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-update.txt
+RUST_OVERRIDE=1.95.1 LLVM_OVERRIDE=21.1.8 GIT_OVERRIDE=2.54.0 SEVENZIP_OVERRIDE=2700 UV_OVERRIDE=0.11.8 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-update.txt
 grep -Fx "has_update=true" "$out"
 grep -F -- "- Rust: 1.95.0 → 1.95.1" "$out"
 grep -F -- "- LLVM: 21.1.7 → 21.1.8" "$out"
 grep -F -- "- Git: 2.53.0 → 2.54.0" "$out"
 grep -F -- "- 7-Zip: 2600 → 2700" "$out"
+grep -F -- "- uv: 0.11.7 → 0.11.8" "$out"
 
 echo "== update-versions applies patch update =="
 copy_repo
@@ -89,6 +91,8 @@ GIT_CURRENT=2.53.0 \
 GIT_LATEST=2.54.0 \
 SEVENZIP_CURRENT=2600 \
 SEVENZIP_LATEST=2700 \
+UV_CURRENT=0.11.7 \
+UV_LATEST=0.11.8 \
 ./scripts/update-versions.sh >/tmp/update-versions-patch.txt
 grep -F "ARG RUST_VERSION=1.95.1" linux/Dockerfile
 grep -F "ARG RUST_VERSION=1.95.1" windows/Dockerfile
@@ -96,6 +100,7 @@ grep -F "ARG LLVM_VERSION=21" linux/Dockerfile
 grep -F "ARG LLVM_VERSION=21.1.8" windows/Dockerfile
 grep -F "ARG GIT_VERSION=2.54.0" windows/Dockerfile
 grep -F "ARG SEVENZIP_VERSION=2700" windows/Dockerfile
+grep -F "astral-sh/uv:0.11.8 " linux/Dockerfile
 
 echo "== update-versions applies llvm major update =="
 copy_repo
@@ -108,6 +113,8 @@ GIT_CURRENT=2.53.0 \
 GIT_LATEST=2.53.0 \
 SEVENZIP_CURRENT=2600 \
 SEVENZIP_LATEST=2600 \
+UV_CURRENT=0.11.7 \
+UV_LATEST=0.11.7 \
 ./scripts/update-versions.sh >/tmp/update-versions-major.txt
 grep -F "ARG LLVM_VERSION=22" linux/Dockerfile
 grep -F "ARG LLVM_VERSION=22.0.0" windows/Dockerfile
