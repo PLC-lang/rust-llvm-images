@@ -17,6 +17,8 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 : "${GIT_LATEST:?}"
 : "${SEVENZIP_CURRENT:?}"
 : "${SEVENZIP_LATEST:?}"
+: "${UV_CURRENT:?}"
+: "${UV_LATEST:?}"
 
 # Update Rust in both Dockerfiles
 if [ "$RUST_CURRENT" != "$RUST_LATEST" ]; then
@@ -50,7 +52,13 @@ if [ "$SEVENZIP_CURRENT" != "$SEVENZIP_LATEST" ]; then
     echo "Updated 7-Zip: $SEVENZIP_CURRENT → $SEVENZIP_LATEST"
 fi
 
+# Update uv in linux/Dockerfile
+if [ "$UV_CURRENT" != "$UV_LATEST" ]; then
+    sed -i "s#astral-sh/uv:$UV_CURRENT #astral-sh/uv:$UV_LATEST #" "$ROOT_DIR/linux/Dockerfile"
+    echo "Updated uv: $UV_CURRENT → $UV_LATEST"
+fi
+
 echo ""
 echo "Updated Dockerfiles:"
-grep -E '(RUST_VERSION|LLVM_VERSION|GIT_VERSION|SEVENZIP_VERSION)=' \
+grep -E '(RUST_VERSION|LLVM_VERSION|GIT_VERSION|SEVENZIP_VERSION)=|astral-sh/uv:' \
     "$ROOT_DIR/linux/Dockerfile" "$ROOT_DIR/windows/Dockerfile"

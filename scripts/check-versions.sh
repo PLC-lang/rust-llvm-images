@@ -5,7 +5,7 @@
 set -e
 
 # Input: optional override versions from environment
-# RUST_OVERRIDE, LLVM_OVERRIDE, GIT_OVERRIDE, SEVENZIP_OVERRIDE
+# RUST_OVERRIDE, LLVM_OVERRIDE, GIT_OVERRIDE, SEVENZIP_OVERRIDE, UV_OVERRIDE
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -17,6 +17,7 @@ get_current_versions() {
     LLVM_MAJOR_CURRENT=$(grep -oP 'LLVM_VERSION=\K[0-9]+' "$ROOT_DIR/linux/Dockerfile" | head -1)
     GIT_CURRENT=$(grep -oP 'GIT_VERSION=\K[0-9.]+' "$ROOT_DIR/windows/Dockerfile" | head -1)
     SEVENZIP_CURRENT=$(grep -oP 'SEVENZIP_VERSION=\K[0-9]+' "$ROOT_DIR/windows/Dockerfile" | head -1)
+    UV_CURRENT=$(grep -oP 'astral-sh/uv:\K[0-9.]+' "$ROOT_DIR/linux/Dockerfile" | head -1)
 }
 
 # Get latest versions from upstream
@@ -49,6 +50,13 @@ get_latest_versions() {
     else
         SEVENZIP_LATEST=$(curl -s https://www.7-zip.org/download.html | grep -oP '7z\K[0-9]{4}(?=-x64\.exe)' | head -1)
     fi
+
+    # uv
+    if [ -n "$UV_OVERRIDE" ]; then
+        UV_LATEST="$UV_OVERRIDE"
+    else
+        UV_LATEST=$(gh api repos/astral-sh/uv/releases/latest --jq '.tag_name' | grep -oP '[0-9]+\.[0-9]+\.[0-9]+')
+    fi
 }
 
 # Compare and determine what needs updating
@@ -67,13 +75,16 @@ check_updates() {
         HAS_UPDATE=true
     fi
 
-    # Git and 7-Zip updated opportunistically
+    # Git, 7-Zip and uv updated opportunistically
     if [ "$HAS_UPDATE" = true ]; then
         if [ "$GIT_CURRENT" != "$GIT_LATEST" ]; then
             SUMMARY="${SUMMARY}- Git: ${GIT_CURRENT} → ${GIT_LATEST}\n"
         fi
         if [ "$SEVENZIP_CURRENT" != "$SEVENZIP_LATEST" ]; then
             SUMMARY="${SUMMARY}- 7-Zip: ${SEVENZIP_CURRENT} → ${SEVENZIP_LATEST}\n"
+        fi
+        if [ "$UV_CURRENT" != "$UV_LATEST" ]; then
+            SUMMARY="${SUMMARY}- uv: ${UV_CURRENT} → ${UV_LATEST}\n"
         fi
     fi
 }
@@ -92,6 +103,8 @@ output_github_actions() {
         echo "git_latest=$GIT_LATEST"
         echo "sevenzip_current=$SEVENZIP_CURRENT"
         echo "sevenzip_latest=$SEVENZIP_LATEST"
+        echo "uv_current=$UV_CURRENT"
+        echo "uv_latest=$UV_LATEST"
         echo "has_update=$HAS_UPDATE"
         echo "summary<<EOF"
         echo -e "$SUMMARY"
@@ -106,12 +119,14 @@ print_summary() {
     echo "  LLVM: $LLVM_CURRENT (major: $LLVM_MAJOR_CURRENT)"
     echo "  Git: $GIT_CURRENT"
     echo "  7-Zip: $SEVENZIP_CURRENT"
+    echo "  uv: $UV_CURRENT"
     echo ""
     echo "Latest versions:"
     echo "  Rust: $RUST_LATEST"
     echo "  LLVM: $LLVM_LATEST (major: $LLVM_MAJOR_LATEST)"
     echo "  Git: $GIT_LATEST"
     echo "  7-Zip: $SEVENZIP_LATEST"
+    echo "  uv: $UV_LATEST"
     echo ""
     
     if [ "$HAS_UPDATE" = true ]; then

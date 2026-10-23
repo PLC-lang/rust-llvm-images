@@ -47,6 +47,9 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
 # Use a non root directory for uv
 ENV UV_TOOL_DIR="/usr/local/uv"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
+# Trust the system CA store instead of the Mozilla roots bundled into the uv binary,
+# so CA distrusts shipped by Debian also apply to uv
+ENV UV_SYSTEM_CERTS=true
 RUN uv tool install lit
 
 # Install Rust

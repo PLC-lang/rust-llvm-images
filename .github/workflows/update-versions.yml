@@ -27,6 +27,10 @@ on:
         description: '7-Zip version code e.g. 2600 (leave empty to auto-detect)'
         required: false
         type: string
+      uv_version:
+        description: 'uv version (leave empty to auto-detect)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -45,6 +49,8 @@ jobs:
       git_latest: ${{ steps.check.outputs.git_latest }}
       sevenzip_current: ${{ steps.check.outputs.sevenzip_current }}
       sevenzip_latest: ${{ steps.check.outputs.sevenzip_latest }}
+      uv_current: ${{ steps.check.outputs.uv_current }}
+      uv_latest: ${{ steps.check.outputs.uv_latest }}
       has_update: ${{ steps.check.outputs.has_update }}
       summary: ${{ steps.check.outputs.summary }}
     steps:
@@ -58,6 +64,7 @@ jobs:
           LLVM_OVERRIDE: ${{ inputs.llvm_version }}
           GIT_OVERRIDE: ${{ inputs.git_version }}
           SEVENZIP_OVERRIDE: ${{ inputs.sevenzip_version }}
+          UV_OVERRIDE: ${{ inputs.uv_version }}
         run: ./scripts/check-versions.sh
 
   report:
@@ -78,6 +85,8 @@ jobs:
           GIT_LATEST: ${{ needs.check-updates.outputs.git_latest }}
           SEVENZIP_CURRENT: ${{ needs.check-updates.outputs.sevenzip_current }}
           SEVENZIP_LATEST: ${{ needs.check-updates.outputs.sevenzip_latest }}
+          UV_CURRENT: ${{ needs.check-updates.outputs.uv_current }}
+          UV_LATEST: ${{ needs.check-updates.outputs.uv_latest }}
         run: |
           {
             echo "## Update check result"
@@ -88,6 +97,7 @@ jobs:
             echo "| LLVM (Windows) | $LLVM_CURRENT | $LLVM_LATEST |"
             echo "| Git for Windows | $GIT_CURRENT | $GIT_LATEST |"
             echo "| 7-Zip | $SEVENZIP_CURRENT | $SEVENZIP_LATEST |"
+            echo "| uv | $UV_CURRENT | $UV_LATEST |"
             echo ""
 
             if [ "$HAS_UPDATE" = "true" ]; then
@@ -134,6 +144,8 @@ jobs:
           GIT_LATEST: ${{ needs.check-updates.outputs.git_latest }}
           SEVENZIP_CURRENT: ${{ needs.check-updates.outputs.sevenzip_current }}
           SEVENZIP_LATEST: ${{ needs.check-updates.outputs.sevenzip_latest }}
+          UV_CURRENT: ${{ needs.check-updates.outputs.uv_current }}
+          UV_LATEST: ${{ needs.check-updates.outputs.uv_latest }}
         run: ./scripts/update-versions.sh
 
       - name: Validate URLs
@@ -172,6 +184,7 @@ jobs:
             | LLVM (Linux) | ${{ needs.check-updates.outputs.llvm_major }} |
             | Git for Windows | ${{ needs.check-updates.outputs.git_latest }} |
             | 7-Zip | ${{ needs.check-updates.outputs.sevenzip_latest }} |
+            | uv | ${{ needs.check-updates.outputs.uv_latest }} |
             
             ## Release
             When merged, this will be tagged as `${{ steps.tag.outputs.release_tag }}`.
