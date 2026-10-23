@@ -183,7 +183,8 @@ jobs:
             VERSIONS+=("$(echo "$REF" | sed -e 's,.*/\(.*\),\1,')")
           fi
 
+          # The per-arch tags can be image indexes (newer Docker pushes them with an
+          # attestation manifest), which `docker manifest create` rejects
           for V in "${VERSIONS[@]}"; do
-            docker manifest create $IMAGE_ID:$V $IMAGE_ID:$V-arm64 $IMAGE_ID:$V-x86_64
-            docker manifest push $IMAGE_ID:$V
+            docker buildx imagetools create --tag $IMAGE_ID:$V $IMAGE_ID:$V-arm64 $IMAGE_ID:$V-x86_64
           done
