@@ -54,16 +54,39 @@ echo "== tag edge cases =="
 [ "$(format_tag 21 1.96.0)" = "v21-1.96" ]
 printf "tag tests passed\n"
 
+echo "== current dependency versions from repo =="
+RUST_CUR=$(grep -oP "RUST_VERSION=\\K[0-9.]+" linux/Dockerfile | head -1)
+LLVM_CUR=$(grep -oP "LLVM_VERSION=\\K[0-9.]+" windows/Dockerfile | head -1)
+LLVM_MAJOR_CUR=${LLVM_CUR%%.*}
+GIT_CUR=$(grep -oP "GIT_VERSION=\\K[0-9.]+" windows/Dockerfile | head -1)
+SEVENZIP_CUR=$(grep -oP "SEVENZIP_VERSION=\\K[0-9]+" windows/Dockerfile | head -1)
+UV_CUR=$(grep -oP "astral-sh/uv:\\K[0-9.]+" linux/Dockerfile | head -1)
+printf "rust=%s llvm=%s git=%s 7zip=%s uv=%s\n" "$RUST_CUR" "$LLVM_CUR" "$GIT_CUR" "$SEVENZIP_CUR" "$UV_CUR"
+
+# Synthetic "newer" versions derived from the current ones, so the tests
+# do not go stale whenever the Dockerfiles are bumped
+bump_patch() {
+  local major minor patch
+  IFS="." read -r major minor patch <<< "$1"
+  printf "%s.%s.%s\n" "$major" "$minor" "$((patch + 1))"
+}
+RUST_NEW=$(bump_patch "$RUST_CUR")
+LLVM_NEW=$(bump_patch "$LLVM_CUR")
+LLVM_MAJOR_NEW=$((LLVM_MAJOR_CUR + 1))
+GIT_NEW=$(bump_patch "$GIT_CUR")
+SEVENZIP_NEW=$((SEVENZIP_CUR + 1))
+UV_NEW=$(bump_patch "$UV_CUR")
+
 echo "== check-versions no update =="
 copy_repo
 out=$(mktemp)
-RUST_OVERRIDE=1.95.0 LLVM_OVERRIDE=21.1.7 GIT_OVERRIDE=2.53.0 SEVENZIP_OVERRIDE=2600 UV_OVERRIDE=0.11.7 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-no-update.txt
+RUST_OVERRIDE=$RUST_CUR LLVM_OVERRIDE=$LLVM_CUR GIT_OVERRIDE=$GIT_CUR SEVENZIP_OVERRIDE=$SEVENZIP_CUR UV_OVERRIDE=$UV_CUR GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-no-update.txt
 grep -Fx "has_update=false" "$out"
 
-echo "== check-versions git/7zip only do not trigger =="
+echo "== check-versions git/7zip/uv only do not trigger =="
 copy_repo
 out=$(mktemp)
-RUST_OVERRIDE=1.95.0 LLVM_OVERRIDE=21.1.7 GIT_OVERRIDE=2.54.0 SEVENZIP_OVERRIDE=2700 UV_OVERRIDE=0.11.8 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-tools-only.txt
+RUST_OVERRIDE=$RUST_CUR LLVM_OVERRIDE=$LLVM_CUR GIT_OVERRIDE=$GIT_NEW SEVENZIP_OVERRIDE=$SEVENZIP_NEW UV_OVERRIDE=$UV_NEW GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-tools-only.txt
 grep -Fx "has_update=false" "$out"
 ! grep -Fq -- "- Git:" "$out"
 ! grep -Fq -- "- 7-Zip:" "$out"
@@ -72,58 +95,58 @@ grep -Fx "has_update=false" "$out"
 echo "== check-versions update available =="
 copy_repo
 out=$(mktemp)
-RUST_OVERRIDE=1.95.1 LLVM_OVERRIDE=21.1.8 GIT_OVERRIDE=2.54.0 SEVENZIP_OVERRIDE=2700 UV_OVERRIDE=0.11.8 GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-update.txt
+RUST_OVERRIDE=$RUST_NEW LLVM_OVERRIDE=$LLVM_NEW GIT_OVERRIDE=$GIT_NEW SEVENZIP_OVERRIDE=$SEVENZIP_NEW UV_OVERRIDE=$UV_NEW GITHUB_OUTPUT="$out" ./scripts/check-versions.sh >/tmp/check-update.txt
 grep -Fx "has_update=true" "$out"
-grep -F -- "- Rust: 1.95.0 → 1.95.1" "$out"
-grep -F -- "- LLVM: 21.1.7 → 21.1.8" "$out"
-grep -F -- "- Git: 2.53.0 → 2.54.0" "$out"
-grep -F -- "- 7-Zip: 2600 → 2700" "$out"
-grep -F -- "- uv: 0.11.7 → 0.11.8" "$out"
+grep -F -- "- Rust: $RUST_CUR → $RUST_NEW" "$out"
+grep -F -- "- LLVM: $LLVM_CUR → $LLVM_NEW" "$out"
+grep -F -- "- Git: $GIT_CUR → $GIT_NEW" "$out"
+grep -F -- "- 7-Zip: $SEVENZIP_CUR → $SEVENZIP_NEW" "$out"
+grep -F -- "- uv: $UV_CUR → $UV_NEW" "$out"
 
 echo "== update-versions applies patch update =="
 copy_repo
-RUST_CURRENT=1.95.0 \
-RUST_LATEST=1.95.1 \
-LLVM_CURRENT=21.1.7 \
-LLVM_LATEST=21.1.8 \
-LLVM_MAJOR=21 \
-GIT_CURRENT=2.53.0 \
-GIT_LATEST=2.54.0 \
-SEVENZIP_CURRENT=2600 \
-SEVENZIP_LATEST=2700 \
-UV_CURRENT=0.11.7 \
-UV_LATEST=0.11.8 \
+RUST_CURRENT=$RUST_CUR \
+RUST_LATEST=$RUST_NEW \
+LLVM_CURRENT=$LLVM_CUR \
+LLVM_LATEST=$LLVM_NEW \
+LLVM_MAJOR=$LLVM_MAJOR_CUR \
+GIT_CURRENT=$GIT_CUR \
+GIT_LATEST=$GIT_NEW \
+SEVENZIP_CURRENT=$SEVENZIP_CUR \
+SEVENZIP_LATEST=$SEVENZIP_NEW \
+UV_CURRENT=$UV_CUR \
+UV_LATEST=$UV_NEW \
 ./scripts/update-versions.sh >/tmp/update-versions-patch.txt
-grep -F "ARG RUST_VERSION=1.95.1" linux/Dockerfile
-grep -F "ARG RUST_VERSION=1.95.1" windows/Dockerfile
-grep -F "ARG LLVM_VERSION=21" linux/Dockerfile
-grep -F "ARG LLVM_VERSION=21.1.8" windows/Dockerfile
-grep -F "ARG GIT_VERSION=2.54.0" windows/Dockerfile
-grep -F "ARG SEVENZIP_VERSION=2700" windows/Dockerfile
-grep -F "astral-sh/uv:0.11.8 " linux/Dockerfile
+grep -F "ARG RUST_VERSION=$RUST_NEW" linux/Dockerfile
+grep -F "ARG RUST_VERSION=$RUST_NEW" windows/Dockerfile
+grep -F "ARG LLVM_VERSION=$LLVM_MAJOR_CUR" linux/Dockerfile
+grep -F "ARG LLVM_VERSION=$LLVM_NEW" windows/Dockerfile
+grep -F "ARG GIT_VERSION=$GIT_NEW" windows/Dockerfile
+grep -F "ARG SEVENZIP_VERSION=$SEVENZIP_NEW" windows/Dockerfile
+grep -F "astral-sh/uv:$UV_NEW " linux/Dockerfile
 
 echo "== update-versions applies llvm major update =="
 copy_repo
-RUST_CURRENT=1.95.0 \
-RUST_LATEST=1.95.0 \
-LLVM_CURRENT=21.1.7 \
-LLVM_LATEST=22.0.0 \
-LLVM_MAJOR=22 \
-GIT_CURRENT=2.53.0 \
-GIT_LATEST=2.53.0 \
-SEVENZIP_CURRENT=2600 \
-SEVENZIP_LATEST=2600 \
-UV_CURRENT=0.11.7 \
-UV_LATEST=0.11.7 \
+RUST_CURRENT=$RUST_CUR \
+RUST_LATEST=$RUST_CUR \
+LLVM_CURRENT=$LLVM_CUR \
+LLVM_LATEST=$LLVM_MAJOR_NEW.1.0 \
+LLVM_MAJOR=$LLVM_MAJOR_NEW \
+GIT_CURRENT=$GIT_CUR \
+GIT_LATEST=$GIT_CUR \
+SEVENZIP_CURRENT=$SEVENZIP_CUR \
+SEVENZIP_LATEST=$SEVENZIP_CUR \
+UV_CURRENT=$UV_CUR \
+UV_LATEST=$UV_CUR \
 ./scripts/update-versions.sh >/tmp/update-versions-major.txt
-grep -F "ARG LLVM_VERSION=22" linux/Dockerfile
-grep -F "ARG LLVM_VERSION=22.0.0" windows/Dockerfile
+grep -F "ARG LLVM_VERSION=$LLVM_MAJOR_NEW" linux/Dockerfile
+grep -F "ARG LLVM_VERSION=$LLVM_MAJOR_NEW.1.0" windows/Dockerfile
 
 echo "== validate-urls =="
 copy_repo
 ./scripts/validate-urls.sh | tee /tmp/validate-urls.txt >/dev/null
 grep -F "https://aka.ms/vs/17/release/channel" /tmp/validate-urls.txt
-grep -F "https://apt.llvm.org/llvm.sh" /tmp/validate-urls.txt
+grep -F "https://apt.llvm.org/llvm-snapshot.gpg.key" /tmp/validate-urls.txt
 grep -F "https://sh.rustup.rs" /tmp/validate-urls.txt
 grep -F "All URLs validated successfully" /tmp/validate-urls.txt
 
