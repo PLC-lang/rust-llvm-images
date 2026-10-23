@@ -67,7 +67,7 @@ jobs:
           docker push $IMAGE_ID:$VERSION
   build-windows:
     name: Run windows image build
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v3
       - name: Build image
@@ -115,5 +115,6 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
           # Use Docker `latest` tag convention
           [ "$VERSION" == "main" ] && VERSION=latest
-          docker manifest create $IMAGE_ID:$VERSION $IMAGE_ID:$VERSION-arm64 $IMAGE_ID:$VERSION-x86_64
-          docker manifest push $IMAGE_ID:$VERSION
+          # The per-arch tags can be image indexes (newer Docker pushes them with an
+          # attestation manifest), which `docker manifest create` rejects
+          docker buildx imagetools create --tag $IMAGE_ID:$VERSION $IMAGE_ID:$VERSION-arm64 $IMAGE_ID:$VERSION-x86_64

@@ -45,7 +45,8 @@ RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VER% -y
 RUN rustup install stable
 
 RUN rustup component add llvm-tools-preview 
-RUN cargo install mdbook grcov cargo-nextest
+# Pinned to the newest releases that still build with Rust 1.90 (cargo-nextest 0.9.129+ needs 1.91)
+RUN cargo install --locked mdbook@0.5.4 grcov@0.10.7 cargo-nextest@0.9.128
 
 #RUN cargo install cargo-watch #Activate this for local builds to enable watching
 WORKDIR C:/build
