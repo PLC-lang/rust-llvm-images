@@ -22,6 +22,9 @@ RUN apt install -y zip clang lldb lld clangd clang-14 lldb-14 lld-14 clangd-14 l
 
 # Install llvm-lit, used by our correctness tests
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /uvx /bin/
+# Trust the system CA store instead of the roots bundled into the uv binary, so CA
+# distrusts shipped by Debian also apply to uv (uv < 0.11 only knows UV_NATIVE_TLS)
+ENV UV_NATIVE_TLS=true
 ENV UV_TOOL_BIN_DIR="/usr/local/bin/"
 RUN uv tool install lit==18.1.8
 
