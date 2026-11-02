@@ -20,6 +20,15 @@ RUN apt update \
 # TODO: Remove this once we completely switched over to LLVM 21
 RUN apt install -y zip clang lldb lld clangd clang-14 lldb-14 lld-14 clangd-14 liblld-14-dev llvm-14-dev libpolly-14-dev
 
+# gRPC (from clangd-14) and NSS (from llvm-14 via libcurl3-nss) ship their own root
+# lists. Point both at the system trust store so Debian's CA distrusts apply to them too.
+RUN apt install -y --no-install-recommends p11-kit-modules \
+    && MULTIARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH) \
+    && dpkg-divert --local --rename --add /usr/share/grpc/roots.pem \
+    && ln -s /etc/ssl/certs/ca-certificates.crt /usr/share/grpc/roots.pem \
+    && dpkg-divert --local --rename --add /usr/lib/$MULTIARCH/libnssckbi.so \
+    && ln -s pkcs11/p11-kit-trust.so /usr/lib/$MULTIARCH/libnssckbi.so
+
 # Install llvm-lit, used by our correctness tests
 COPY --from=ghcr.io/astral-sh/uv:0.9.17 /uv /uvx /bin/
 # Trust the system CA store instead of the roots bundled into the uv binary, so CA

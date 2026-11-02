@@ -6,7 +6,9 @@ FROM $BASE_IMAGE
 ARG LLVM_VER=21.1.7
 ARG RUST_VER=1.90
 ARG ZIP_VERSION=2501
-ARG GIT_VERSION=2.51.0
+ARG GIT_VERSION=2.56.0
+# Git for Windows build number (vX.Y.Z.windows.N); .3+ drops the eMudhra roots from its CA bundle
+ARG GIT_WINDOWS_RELEASE=4
 
 WORKDIR C:/buildtools
 
@@ -29,7 +31,7 @@ RUN 7zsetup.exe /S /D=C:/buildtools/7z
 
 RUN setx /M PATH "%PATH%;C:\\buildtools\\7z;C:\\buildtools\\llvm\\bin"
 
-ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.windows.1/PortableGit-${GIT_VERSION}-64-bit.7z.exe C:/TEMP/git-install.exe
+ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.windows.${GIT_WINDOWS_RELEASE}/PortableGit-${GIT_VERSION}.${GIT_WINDOWS_RELEASE}-64-bit.7z.exe C:/TEMP/git-install.exe
 # Install git to use bash
 RUN 7z.exe x C:/TEMP/git-install.exe -ogit
 
@@ -45,8 +47,14 @@ RUN C:/TEMP/rustup-init.exe --default-toolchain %RUST_VER% -y
 RUN rustup install stable
 
 RUN rustup component add llvm-tools-preview 
-# Pinned to the newest releases that still build with Rust 1.90 (cargo-nextest 0.9.129+ needs 1.91)
-RUN cargo install --locked mdbook@0.5.4 grcov@0.10.7 cargo-nextest@0.9.128
+# Pinned to the newest releases that still build with Rust 1.90
+RUN cargo install --locked mdbook@0.5.4 grcov@0.10.7
+
+# cargo-nextest 0.9.129+ needs Rust 1.91 to build, and 0.9.128 embeds the distrusted
+# emSign ECC Root CA - G3, so use the prebuilt release binary instead
+ARG NEXTEST_VERSION=0.9.149
+ADD https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-${NEXTEST_VERSION}/cargo-nextest-${NEXTEST_VERSION}-x86_64-pc-windows-msvc.zip C:/TEMP/nextest.zip
+RUN 7z x C:/TEMP/nextest.zip -o%USERPROFILE%\.cargo\bin && del /q C:\TEMP\nextest.zip
 
 #RUN cargo install cargo-watch #Activate this for local builds to enable watching
 WORKDIR C:/build
